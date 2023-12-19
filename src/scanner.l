@@ -34,12 +34,9 @@ using namespace sscad;
 using namespace std::string_literals;
 // update column information
 #define YY_USER_ACTION loc.columns(yyleng);
-#define yyterminate() sscad::Parser::make_END(loc);
 %}
 
-%x cond_comment cond_lcomment cond_string
-%x cond_include
-%x cond_use
+%x cond_comment cond_lcomment cond_string cond_include cond_use
 
 D [0-9]
 E [Ee][+-]?{D}+
