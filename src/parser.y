@@ -86,7 +86,7 @@ std::shared_ptr<ModuleCall> makeModifier(
 %type <std::shared_ptr<SingleModuleCall>> single_module_instantiation 
 %type <std::shared_ptr<ModuleCall>> module_instantiation
 %type <BinOp> binop
-%type <Expr> expr call unary primary exponent expr_or_empty
+%type <Expr> expr call unary primary exponent
 %type <std::string> module_id
 %type <std::vector<AssignNode>> argument_list parameter_list
 %type <AssignNode> argument parameter
@@ -107,7 +107,6 @@ statement
               std::vector<AssignNode>(), driver.getBody(), @$)); }
         | MODULE ID LPAREN parameter_list optional_comma RPAREN statement
           { driver.modules.push_back(ModuleDecl($2, $4, driver.getBody(), @$)); }
-        | END
         ;
 
 inner_input
@@ -204,10 +203,6 @@ primary : TRUE               { $$ = std::make_shared<NumberNode>(1, @$); }
         | LPAREN expr RPAREN { $$ = $2; }
           /* lists are not handled for now */
         ;
-
-expr_or_empty  : /* empty */ { $$ = nullptr; }
-               | expr { $$ = $1; }
-               ;
 
 parameter_list : parameter                      { $$ = {$1}; }
                | parameter_list COMMA parameter { $$ = $1; $$.push_back($3); }
