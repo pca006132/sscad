@@ -35,11 +35,10 @@ struct Location {
   Position begin;
   Position end;
 
-  void reset() { end = begin = {nullptr, 0, 1, 1}; }
   void step() { begin = end; }
   void columns(long count = 1) { end.column += count; }
   void lines(long count = 1) {
-    if (count) end.column = 0;
+    if (count) end.column = 1;
     end.line += count;
   }
   void lines(const std::string& text) {

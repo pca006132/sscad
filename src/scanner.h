@@ -16,6 +16,9 @@
  */
 #pragma once
 
+#include <unicode/brkiter.h>
+#include <unicode/utypes.h>
+
 #include <codecvt>
 #include <locale>
 #ifndef yyFlexLexerOnce
@@ -35,14 +38,41 @@ class Driver;
 
 class Scanner : public yyFlexLexer {
  public:
-  Scanner(Driver &driver) : driver(driver) {}
-  virtual ~Scanner() {}
+  Scanner(Driver &driver) : driver(driver) {
+    brkiter = icu::BreakIterator::createCharacterInstance(
+        icu::Locale::getDefault(), status);
+  }
+  virtual ~Scanner() {
+    if (brkiter != nullptr) delete brkiter;
+  }
   virtual sscad::Parser::symbol_type getNextToken();
 
  private:
   Driver &driver;
   std::string stringcontents;
+  UErrorCode status = U_ZERO_ERROR;
+  icu::BreakIterator *brkiter = nullptr;
   std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+
+  // negative if the string is not a valid identifier
+  int numGraphemes(const char *str) {
+    auto s = icu::UnicodeString::fromUTF8(str);
+    brkiter->setText(s);
+    int length = 0;
+    bool validIdent = true;
+    int c;
+    while ((c = brkiter->next()) != icu::BreakIterator::DONE) {
+      if (validIdent) {
+        if (length == 0)
+          validIdent = u_hasBinaryProperty(s.char32At(c - 1), UCHAR_ID_START);
+        else if (!u_hasBinaryProperty(s.char32At(c - 1), UCHAR_ID_CONTINUE))
+          validIdent = false;
+      }
+      length++;
+    }
+    if (!validIdent) length = -length;
+    return length;
+  }
 
   Parser::symbol_type parseNumber(const std::string &str, const Location loc) {
     errno = 0;

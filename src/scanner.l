@@ -59,7 +59,7 @@ loc.step();
   /* include file BEGIN */
 include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 <cond_include>{
-[^\t\r\n>]*             { stringcontents = yytext; }
+[^\t\r\n>]*             { stringcontents = yytext; loc.columns(abs(numGraphemes(yytext))); }
 ">"                     { BEGIN(INITIAL); driver.lexerInclude(stringcontents); }
 [\n\r]                  { throw Parser::syntax_error(loc, "Newline in include statement"); }
 <<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated include statement"); }
@@ -69,12 +69,14 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
   /* quoted string BEGIN */
 \"                      { BEGIN(cond_string); stringcontents.clear(); }
 <cond_string>{
-\\n                     { stringcontents += '\n'; }
+\\n                     { stringcontents += '\n';  }
 \\t                     { stringcontents += '\t'; }
 \\r                     { stringcontents += '\r'; }
 \\\\                    { stringcontents += '\\'; }
 \\\"                    { stringcontents += '"'; }
-{UNICODE}               { stringcontents += yytext; }
+{UNICODE}               { stringcontents += yytext;
+                          int unicodeLength = abs(numGraphemes(yytext));
+                          loc.columns(unicodeLength - yyleng); }
 \\x[0-7]{H}             { unsigned long i = std::strtoul(yytext + 2, NULL, 16);
                           stringcontents += (i == 0 ? ' ' : (unsigned char)(i & 0xff)); }
 \\u{H}{4}|\\U{H}{6}     { char32_t c = std::strtoul(yytext + 2, NULL, 16);
@@ -91,20 +93,20 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 \/\/                    { BEGIN(cond_lcomment); }
 <cond_lcomment>{
 {NL}                    { BEGIN(INITIAL); loc.lines(); }
-{UNICODE}
-.
+{UNICODE}               { int unicodeLength = abs(numGraphemes(yytext));
+                          loc.columns(unicodeLength); }
 <<EOF>>                 { BEGIN(INITIAL); if (driver.lexerFileEnd()) return Parser::make_END(loc); }
 }
   /* single-line comment END */
 
   /* multi-lines comment BEGIN */
-"/*"                    BEGIN(cond_comment);
+"/*"                    { BEGIN(cond_comment); }
 <cond_comment>{
-"*/"                    BEGIN(INITIAL);
-{NL}                    loc.lines();
-{UNICODE}
-.
-<<EOF>>                 throw Parser::syntax_error(loc, "Unterminated comment");
+"*/"                    { BEGIN(INITIAL); }
+{NL}                    { loc.lines(); }
+{UNICODE}               { int unicodeLength = abs(numGraphemes(yytext));
+                          loc.columns(unicodeLength); }
+<<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated comment"); }
 }
   /* multi-lines comment END */
 
@@ -150,9 +152,17 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
   /* aux symbols END */
 
   /* supports no-break space U+00A0 (UTF-8 encoded: C2A0) as well as other spaces */
-[\xc2\xa0\t ]
-{NL}                    { loc.lines(); }
+[\xc2\xa0\t ]           { loc.step(); }
+{NL}                    { loc.lines(); loc.step(); }
 <<EOF>>                 { if (driver.lexerFileEnd()) return Parser::make_END(loc); }
+"$"?([a-zA-Z0-9_]|{UNICODE})+ {
+  int length = numGraphemes(yytext);
+  // update location
+  loc.columns(abs(length) - yyleng);
+  // check if it is a valid identifier
+  if (length < 0)
+    throw Parser::syntax_error(loc, "Illegal identifier "s + yytext);
+  return Parser::make_TOK_ID(yytext, loc);
+}
 .                       throw Parser::syntax_error(loc, "Unexpected character "s + yytext);
-{UNICODE}+              throw Parser::syntax_error(loc, "Unicode character not allowd in code.");
 

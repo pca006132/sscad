@@ -28,8 +28,9 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT EMSCRIPTEN)
         ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
 endif()
 
-find_package(BISON)
-find_package(FLEX)
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+find_package(ICU COMPONENTS uc REQUIRED)
 
 BISON_TARGET(Parser src/parser.y
              ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp
@@ -43,5 +44,6 @@ ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 add_executable(sscad src/main.cpp src/ast.cpp src/driver.cpp
     ${BISON_Parser_OUTPUTS} ${FLEX_Scanner_OUTPUTS})
 target_include_directories(sscad PRIVATE ${CMAKE_CURRENT_BINARY_DIR} src)
+target_link_libraries(sscad PRIVATE ICU::uc)
 target_compile_features(sscad PRIVATE cxx_std_17)
 
