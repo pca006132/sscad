@@ -41,7 +41,7 @@ FLEX_TARGET(Scanner src/scanner.l
 
 ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 
-add_executable(sscad src/main.cpp src/ast.cpp src/driver.cpp
+add_executable(sscad src/main.cpp src/driver.cpp
     ${BISON_Parser_OUTPUTS} ${FLEX_Scanner_OUTPUTS})
 target_include_directories(sscad PRIVATE ${CMAKE_CURRENT_BINARY_DIR} src)
 target_link_libraries(sscad PRIVATE ICU::uc)

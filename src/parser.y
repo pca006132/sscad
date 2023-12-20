@@ -91,9 +91,14 @@ statement
         : SEMI
         | expr SEMI
           {
-            std::stringstream ss;
-            $1->repr(ss);
-            std::cout << ss.str() << std::endl;
+            std::function<void(Node*)> f = [&](Node* node) {
+              auto p = dynamic_cast<sscad::IdentNode*>(node);
+              if (p)
+                std::cout << p->name << " " << p->loc << std::endl;
+              else
+                node->visit(f);
+            };
+            $1->visit(f);
           }
         | END
         ;
