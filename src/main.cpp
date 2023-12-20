@@ -16,7 +16,7 @@ int main() {
         (*ss) << "a + b(123, c = 456);";
         break;
       case 1:
-        (*ss) << "include<a>\n foo;";
+        (*ss) << "include<a>\n foo + _測試;";
         break;
       case 2:
         (*ss) << "a * b + c * d > 12 && foo ^ bar;\r\na+b+c\n+d;\nfoo?";

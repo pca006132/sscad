@@ -64,7 +64,8 @@ class Scanner : public yyFlexLexer {
     while ((c = brkiter->next()) != icu::BreakIterator::DONE) {
       if (validIdent) {
         if (length == 0)
-          validIdent = u_hasBinaryProperty(s.char32At(c - 1), UCHAR_ID_START);
+          validIdent = u_hasBinaryProperty(s.char32At(c - 1), UCHAR_ID_START) ||
+                       s.char32At(c - 1) == '_';
         else if (!u_hasBinaryProperty(s.char32At(c - 1), UCHAR_ID_CONTINUE))
           validIdent = false;
       }

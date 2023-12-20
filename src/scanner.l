@@ -74,17 +74,18 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 \\r                     { stringcontents += '\r'; }
 \\\\                    { stringcontents += '\\'; }
 \\\"                    { stringcontents += '"'; }
-{UNICODE}               { stringcontents += yytext;
-                          int unicodeLength = abs(numGraphemes(yytext));
-                          loc.columns(unicodeLength - yyleng); }
 \\x[0-7]{H}             { unsigned long i = std::strtoul(yytext + 2, NULL, 16);
                           stringcontents += (i == 0 ? ' ' : (unsigned char)(i & 0xff)); }
 \\u{H}{4}|\\U{H}{6}     { char32_t c = std::strtoul(yytext + 2, NULL, 16);
                           stringcontents += converter.to_bytes(c); }
 [^\\\r\n\"]             { stringcontents += yytext; }
 {NL}                    { loc.lines(); }
+{UNICODE}               { stringcontents += yytext;
+                          int unicodeLength = abs(numGraphemes(yytext));
+                          loc.columns(unicodeLength - yyleng); }
 \"                      { BEGIN(INITIAL);
                           return Parser::make_TOK_STRING(stringcontents, loc); }
+.                       { stringcontents += yytext; }
 <<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated string"); }
 }
   /* quoted string END */
@@ -95,6 +96,7 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 {NL}                    { BEGIN(INITIAL); loc.lines(); }
 {UNICODE}               { int unicodeLength = abs(numGraphemes(yytext));
                           loc.columns(unicodeLength); }
+.
 <<EOF>>                 { BEGIN(INITIAL); if (driver.lexerFileEnd()) return Parser::make_END(loc); }
 }
   /* single-line comment END */
@@ -157,7 +159,8 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 <<EOF>>                 { if (driver.lexerFileEnd()) return Parser::make_END(loc); }
 "$"?([a-zA-Z0-9_])+     { return Parser::make_TOK_ID(yytext, loc); }
   /* unicode identifier fallback, slower but robust */
-"$"?({UNICODE})+        { int length = numGraphemes(yytext);
+("$"?([a-zA-Z0-9_]|{UNICODE})+) {
+                          int length = numGraphemes(yytext);
                           // update location
                           loc.columns(abs(length) - yyleng);
                           // check if it is a valid identifier
