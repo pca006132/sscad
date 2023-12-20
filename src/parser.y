@@ -64,7 +64,7 @@ std::shared_ptr<ModuleCall> makeModifier(
 %token MODULE FUNCTION IF ELSE FOR LET EACH
 %token TRUE FALSE UNDEF
 %token END 0 "EOF"
-%token NOT COMMA ASSIGN LPAREN RPAREN SEMI
+%token NOT COMMA ASSIGN LPAREN RPAREN COLON SEMI QUESTION
 %token LSQUARE RSQUARE LBRACE RBRACE HASH DOT
 %token <std::string> ID
 %token <std::string> STRING
@@ -93,8 +93,7 @@ std::shared_ptr<ModuleCall> makeModifier(
 
 %%
 
-input
-        : /* empty */
+input   : /* empty */
         | input statement
         ;
 
@@ -184,9 +183,9 @@ unary   : exponent
         | NOT unary { $$ = std::make_shared<UnaryOpNode>($2, UnaryOp::NOT, @$); }
         ;
 
-exponent : call
-         | call EXP unary { $$ = std::make_shared<BinaryOpNode>($1, $3, BinOp::EXP, @$); }
-         ;
+exponent: call
+        | call EXP unary { $$ = std::make_shared<BinaryOpNode>($1, $3, BinOp::EXP, @$); }
+        ;
 
 call    : primary
         | call LPAREN RPAREN

@@ -157,6 +157,8 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 "}"                     return Parser::make_RBRACE(loc);
 "#"                     return Parser::make_HASH(loc);
 "."                     return Parser::make_DOT(loc);
+":"                     return Parser::make_COLON(loc);
+"?"                     return Parser::make_QUESTION(loc);
   /* aux symbols END */
 
   /* supports no-break space U+00A0 (UTF-8 encoded: C2A0) as well as other spaces */

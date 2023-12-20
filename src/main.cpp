@@ -25,7 +25,7 @@ int main() {
         break;
       case 2:
         (*ss) << "echo(a * b + c * d > 12 && foo ^ "
-                 "bar);\r\necho(a+b+c\n+d);\nfoo?";
+                 "bar);\r\necho(a+b+c\n+d);\nfoo@";
         break;
     }
     return ss;
