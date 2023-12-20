@@ -51,6 +51,10 @@ We also support *unicode identifiers* now (by ID_START and ID_CONTINUE
 properties), with proper support for newline characters and count unicode
 *grapheme clusters* for column number.
 
+Note that only UTF-8 input is supported (which includes ASCII, of cause).
+Inputs with other encoding should convert to UTF-8 before passing into the
+parser.
+
 ### Location Tracking and File Access
 
 Instead of only tracking the location in the current included file, we track the
