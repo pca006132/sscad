@@ -84,7 +84,7 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
                           int unicodeLength = abs(numGraphemes(yytext));
                           loc.columns(unicodeLength - yyleng); }
 \"                      { BEGIN(INITIAL);
-                          return Parser::make_TOK_STRING(stringcontents, loc); }
+                          return Parser::make_STRING(stringcontents, loc); }
 .                       { stringcontents += yytext; }
 <<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated string"); }
 }
@@ -117,18 +117,18 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 {D}+\.{D}*{E}?          return parseNumber(yytext, loc);
 
   /* keywords BEGIN */
-"module"                return Parser::make_TOK_MODULE(loc);
-"function"              return Parser::make_TOK_FUNCTION(loc);
-"if"                    return Parser::make_TOK_IF(loc);
-"else"                  return Parser::make_TOK_ELSE(loc);
-"let"                   return Parser::make_TOK_LET(loc);
-"for"                   return Parser::make_TOK_FOR(loc);
-"each"                  return Parser::make_TOK_EACH(loc);
-"true"                  return Parser::make_TOK_TRUE(loc);
-"false"                 return Parser::make_TOK_FALSE(loc);
-"undef"                 return Parser::make_TOK_UNDEF(loc);
+"module"                return Parser::make_MODULE(loc);
+"function"              return Parser::make_FUNCTION(loc);
+"if"                    return Parser::make_IF(loc);
+"else"                  return Parser::make_ELSE(loc);
+"let"                   return Parser::make_LET(loc);
+"for"                   return Parser::make_FOR(loc);
+"each"                  return Parser::make_EACH(loc);
+"true"                  return Parser::make_TRUE(loc);
+"false"                 return Parser::make_FALSE(loc);
+"undef"                 return Parser::make_UNDEF(loc);
   /* keywords END */
-"$"?[a-zA-Z0-9_]+       return Parser::make_TOK_ID(yytext, loc);
+"$"?[a-zA-Z0-9_]+       return Parser::make_ID(yytext, loc);
 
   /* aux symbols BEGIN */
 "+"                     return Parser::make_ADD(BinOp::ADD, loc);
@@ -151,13 +151,19 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 "("                     return Parser::make_LPAREN(loc);
 ")"                     return Parser::make_RPAREN(loc);
 ";"                     return Parser::make_SEMI(loc);
+"["                     return Parser::make_LSQUARE(loc);
+"]"                     return Parser::make_RSQUARE(loc);
+"{"                     return Parser::make_LBRACE(loc);
+"}"                     return Parser::make_RBRACE(loc);
+"#"                     return Parser::make_HASH(loc);
+"."                     return Parser::make_DOT(loc);
   /* aux symbols END */
 
   /* supports no-break space U+00A0 (UTF-8 encoded: C2A0) as well as other spaces */
 [\xc2\xa0\t ]           { loc.step(); }
 {NL}                    { loc.lines(); loc.step(); }
 <<EOF>>                 { if (driver.lexerFileEnd()) return Parser::make_END(loc); }
-"$"?([a-zA-Z0-9_])+     { return Parser::make_TOK_ID(yytext, loc); }
+"$"?([a-zA-Z0-9_])+     { return Parser::make_ID(yytext, loc); }
   /* unicode identifier fallback, slower but robust */
 ("$"?([a-zA-Z0-9_]|{UNICODE})+) {
                           int length = numGraphemes(yytext);
@@ -166,7 +172,7 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
                           // check if it is a valid identifier
                           if (length < 0)
                             throw Parser::syntax_error(loc, "Illegal identifier "s + yytext);
-                          return Parser::make_TOK_ID(yytext, loc); }
+                          return Parser::make_ID(yytext, loc); }
 .                       { throw Parser::syntax_error(loc,
                             "Unexpected character "s + yytext); }
 

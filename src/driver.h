@@ -18,6 +18,7 @@
 #include <functional>
 #include <stack>
 #include <string>
+#include <unordered_set>
 
 #include "scanner.h"
 
@@ -43,6 +44,15 @@ class Driver {
   FileProvider provider;
   FileResolver resolver;
   std::stack<std::unique_ptr<std::istream>> istreams;
+
+  std::unordered_set<FileHandle> uses;
+  std::vector<ModuleDecl> modules;
+  std::vector<AssignNode> assignments;
+  std::vector<std::shared_ptr<ModuleCall>> moduleCalls;
+
+  ModuleBody getBody() {
+    return ModuleBody(std::move(assignments), std::move(moduleCalls));
+  }
 
   void lexerInclude(std::string);
   bool lexerFileEnd();

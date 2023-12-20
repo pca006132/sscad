@@ -13,13 +13,13 @@ int main() {
     auto ss = std::make_unique<std::stringstream>();
     switch (src) {
       case 0:
-        (*ss) << "a + b(123, c = 456);";
+        (*ss) << "echo(a + b(123, c = 456));";
         break;
       case 1:
-        (*ss) << "include<a>\n foo + _測試;";
+        (*ss) << "include<a>\necho(foo + _測試);";
         break;
       case 2:
-        (*ss) << "a * b + c * d > 12 && foo ^ bar;\r\na+b+c\n+d;\nfoo?";
+        (*ss) << "echo(a * b + c * d > 12 && foo ^ bar);\r\necho(a+b+c\n+d);\nfoo?";
         break;
     }
     return ss;

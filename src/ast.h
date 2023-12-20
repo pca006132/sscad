@@ -64,6 +64,7 @@ class ModuleCall : public Node {
 
 class ModuleBody {
  public:
+  ModuleBody() = default;
   ModuleBody(std::vector<AssignNode> assignments,
              std::vector<std::shared_ptr<ModuleCall>> children)
       : assignments(assignments), children(children) {}
@@ -96,9 +97,10 @@ class SingleModuleCall : public ModuleCall {
 // if else module, then part is stored in ModuleCall::children
 class IfModule : public ModuleCall {
  public:
-  IfModule(std::vector<AssignNode> args, ModuleBody ifthen, ModuleBody ifelse,
-           Location loc)
-      : ifthen(ifthen), ifelse(ifelse), ModuleCall("for", args, loc){};
+  IfModule(Expr args, ModuleBody ifthen, ModuleBody ifelse, Location loc)
+      : ifthen(ifthen),
+        ifelse(ifelse),
+        ModuleCall("if", {AssignNode("", args, loc)}, loc){};
 
   ModuleBody ifthen;
   ModuleBody ifelse;
@@ -107,6 +109,19 @@ class IfModule : public ModuleCall {
     for (auto &iter : args) f(&iter);
     ifthen.visit(f);
     ifelse.visit(f);
+  }
+};
+
+class ModuleModifier : public ModuleCall {
+ public:
+  ModuleModifier(std::string modifier, std::shared_ptr<ModuleCall> module,
+                 Location loc)
+      : modifier(modifier), module(module), ModuleCall(modifier, {}, loc) {}
+
+  std::string modifier;
+  std::shared_ptr<ModuleCall> module;
+  virtual void visit(std::function<void(Node *)> &f) override {
+    f(module.get());
   }
 };
 

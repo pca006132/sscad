@@ -55,16 +55,24 @@ namespace sscad {
 using namespace sscad;
 #define YYMAXDEPTH 20000
 #define yylex(scanner, driver) scanner.getNextToken()
+std::shared_ptr<ModuleCall> makeModifier(
+   std::string modifier,
+   std::shared_ptr<ModuleCall> child,
+   Location loc);
 }
 
-%token TOK_MODULE TOK_FUNCTION TOK_IF TOK_ELSE TOK_FOR TOK_LET TOK_EACH
-%token TOK_TRUE TOK_FALSE TOK_UNDEF
+%token MODULE FUNCTION IF ELSE FOR LET EACH
+%token TRUE FALSE UNDEF
 %token END 0 "EOF"
 %token NOT COMMA ASSIGN LPAREN RPAREN SEMI
-%token <std::string> TOK_ID
-%token <std::string> TOK_STRING
-%token <double> TOK_NUMBER
+%token LSQUARE RSQUARE LBRACE RBRACE HASH DOT
+%token <std::string> ID
+%token <std::string> STRING
+%token <double> NUMBER
 %token <BinOp> AND OR EQ NEQ GT GE LT LE ADD SUB MUL DIV MOD EXP
+
+%nonassoc NO_ELSE
+%nonassoc ELSE
 
 %left OR
 %left AND
@@ -74,11 +82,14 @@ using namespace sscad;
 %left MUL DIV MOD
 %left EXP
 
+%type <std::shared_ptr<IfModule>> if_statement ifelse_statement
+%type <std::shared_ptr<SingleModuleCall>> single_module_instantiation 
+%type <std::shared_ptr<ModuleCall>> module_instantiation
 %type <BinOp> binop
 %type <Expr> expr call unary primary exponent expr_or_empty
 %type <std::string> module_id
 %type <std::vector<AssignNode>> argument_list parameter_list
-%type <AssignNode> assignment argument parameter
+%type <AssignNode> argument parameter
 
 %%
 
@@ -89,20 +100,78 @@ input
 
 statement
         : SEMI
-        | expr SEMI
-          {
-            std::function<void(Node*)> f = [&](Node* node) {
-              auto p = dynamic_cast<sscad::IdentNode*>(node);
-              if (p)
-                std::cout << p->name << " " << p->loc << std::endl;
-              else
-                node->visit(f);
-            };
-            $1->visit(f);
-          }
+        | LBRACE inner_input RBRACE
+        | module_instantiation
+          { driver.moduleCalls.push_back($1); }
+        | MODULE ID LPAREN RPAREN statement
+          { driver.modules.push_back(ModuleDecl($2,
+              std::vector<AssignNode>(), driver.getBody(), @$)); }
+        | MODULE ID LPAREN parameter_list RPAREN statement
+          { driver.modules.push_back(ModuleDecl($2, $4, driver.getBody(), @$)); }
         | END
         ;
 
+inner_input
+        : inner_input statement
+        ;
+
+module_instantiation
+        : NOT module_instantiation
+          { $$ = makeModifier("!", $2, @$); }
+        | HASH module_instantiation
+          { $$ = makeModifier("#", $2, @$); }
+        | MOD module_instantiation
+          { $$ = makeModifier("%", $2, @$); }
+        | MUL module_instantiation
+          /* remove this module */
+          { $$ = nullptr; }
+        | single_module_instantiation child_statement
+          { auto mod = $1;
+            mod->body = driver.getBody();
+            $$ = mod; }
+        | ifelse_statement
+          { $$ = $1; }
+        ;
+
+ifelse_statement
+        : if_statement %prec NO_ELSE
+          { $$ = $1; }
+        | if_statement ELSE child_statement
+          { $$ = $1;
+            $$->ifelse = driver.getBody(); }
+        ;
+
+if_statement
+        : IF LPAREN expr RPAREN child_statement
+          { auto body = driver.getBody();
+            $$ = std::make_shared<IfModule>($3, body, ModuleBody(), @$); }
+        ;
+
+assignment
+        : ID EQ expr SEMI
+          { driver.assignments.push_back(AssignNode($1, $3, @$)); }
+        ;
+
+child_statements
+        : /* empty */
+        | child_statements child_statement
+        | child_statements assignment
+        ;
+
+child_statement
+        : SEMI
+        | LBRACE child_statements RBRACE
+        | module_instantiation
+          { driver.moduleCalls.push_back($1); }
+        ;
+
+single_module_instantiation
+        : module_id LPAREN RPAREN
+        { $$ = std::make_shared<SingleModuleCall>(
+            $1, std::vector<AssignNode>(), ModuleBody(), @$); }
+        | module_id LPAREN argument_list optional_comma RPAREN
+        { $$ = std::make_shared<SingleModuleCall>($1, $3, ModuleBody(), @$); }
+        ;
 
 expr    : unary
         | expr binop unary { $$ = std::make_shared<BinaryOpNode>($1, $3, $2, @$);}
@@ -126,12 +195,12 @@ call    : primary
           /* list lookup not implementd yet */
         ;
 
-primary : TOK_TRUE           { $$ = std::make_shared<NumberNode>(1, @$); }
-        | TOK_FALSE          { $$ = std::make_shared<NumberNode>(0, @$); }
-        | TOK_NUMBER         { $$ = std::make_shared<NumberNode>($1, @$); }
-        | TOK_STRING         { $$ = std::make_shared<StringNode>($1, @$); }
-        | TOK_UNDEF          { $$ = std::make_shared<UndefNode>(@$); }
-        | TOK_ID             { $$ = std::make_shared<IdentNode>($1, @$); }
+primary : TRUE               { $$ = std::make_shared<NumberNode>(1, @$); }
+        | FALSE              { $$ = std::make_shared<NumberNode>(0, @$); }
+        | NUMBER             { $$ = std::make_shared<NumberNode>($1, @$); }
+        | STRING             { $$ = std::make_shared<StringNode>($1, @$); }
+        | UNDEF              { $$ = std::make_shared<UndefNode>(@$); }
+        | ID                 { $$ = std::make_shared<IdentNode>($1, @$); }
         | LPAREN expr RPAREN { $$ = $2; }
           /* lists are not handled for now */
         ;
@@ -144,8 +213,8 @@ parameter_list : parameter                      { $$ = {$1}; }
                | parameter_list COMMA parameter { $$ = $1; $$.push_back($3); }
                ;
 
-parameter      : TOK_ID                         { $$ = AssignNode($1, nullptr, @$); }
-               | TOK_ID ASSIGN expr             { $$ = AssignNode($1, $3, @$); }
+parameter      : ID                             { $$ = AssignNode($1, nullptr, @$); }
+               | ID ASSIGN expr                 { $$ = AssignNode($1, $3, @$); }
                ;
 
 argument_list  : argument                       { $$ = {$1}; }
@@ -153,13 +222,13 @@ argument_list  : argument                       { $$ = {$1}; }
                ;
 
 argument       : expr                           { $$ = AssignNode("", $1, @$); }
-               | TOK_ID ASSIGN expr             { $$ = AssignNode($1, $3, @$); }
+               | ID ASSIGN expr                 { $$ = AssignNode($1, $3, @$); }
                ;
 
-module_id      : TOK_ID                         { $$ = $1; }
-               | TOK_FOR                        { $$ = "for"; }
-               | TOK_LET                        { $$ = "let"; }
-               | TOK_EACH                       { $$ = "each"; }
+module_id      : ID                             { $$ = $1; }
+               | FOR                            { $$ = "for"; }
+               | LET                            { $$ = "let"; }
+               | EACH                           { $$ = "each"; }
                ;
 
 binop   : AND | OR | EQ | NEQ | GT | GE | LT | LE | ADD | SUB | MUL | DIV | MOD;
@@ -167,6 +236,16 @@ binop   : AND | OR | EQ | NEQ | GT | GE | LT | LE | ADD | SUB | MUL | DIV | MOD;
 optional_comma : /* empty */ | COMMA ;
 
 %%
+
+std::shared_ptr<ModuleCall> makeModifier(
+   std::string modifier,
+   std::shared_ptr<ModuleCall> child,
+   Location loc
+) {
+  if (child == nullptr)
+    return nullptr;
+  return std::make_shared<ModuleModifier>(modifier, child, loc);
+}
 
 void sscad::Parser::error(const Location &loc, const std::string &message) {
   throw sscad::Parser::syntax_error(loc, message);

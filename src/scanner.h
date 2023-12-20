@@ -78,7 +78,7 @@ class Scanner : public yyFlexLexer {
   Parser::symbol_type parseNumber(const std::string &str, const Location loc) {
     errno = 0;
     double value = std::strtod(str.c_str(), nullptr);
-    if (errno == 0) return Parser::make_TOK_NUMBER(value, loc);
+    if (errno == 0) return Parser::make_NUMBER(value, loc);
     throw Parser::syntax_error(loc, "Invalid number \""s + str + '"');
   }
 };
