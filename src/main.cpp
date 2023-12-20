@@ -16,8 +16,12 @@ int main() {
         (*ss) << "echo(a + b(123, c = 456));";
         break;
       case 1:
-        (*ss) << "include<a>\necho(foo + naïve);\nfoo2(123) { cube(); }\n";
-        (*ss) << "module foo2(a, b = 2) { cube(); children(); }";
+        (*ss) << "include<a>\n"
+                 "echo(foo + naïve);\n"
+                 "foo2(123) { cube(); }\n"
+                 "module foo2(a, b = 2) { cube(); children(); }\n"
+                 "if (1+1==2) cube();\n"
+                 "if (1+1==2) { a(); } else { b(); }";
         break;
       case 2:
         (*ss) << "echo(a * b + c * d > 12 && foo ^ "
