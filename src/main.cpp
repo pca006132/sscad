@@ -16,10 +16,12 @@ int main() {
         (*ss) << "echo(a + b(123, c = 456));";
         break;
       case 1:
-        (*ss) << "include<a>\necho(foo + _測試);";
+        (*ss) << "include<a>\necho(foo + naïve);\nfoo2(123) { cube(); }\n";
+        (*ss) << "module foo2(a, b = 2) { cube(); children(); }";
         break;
       case 2:
-        (*ss) << "echo(a * b + c * d > 12 && foo ^ bar);\r\necho(a+b+c\n+d);\nfoo?";
+        (*ss) << "echo(a * b + c * d > 12 && foo ^ "
+                 "bar);\r\necho(a+b+c\n+d);\nfoo?";
         break;
     }
     return ss;

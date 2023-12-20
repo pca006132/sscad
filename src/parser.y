@@ -106,13 +106,14 @@ statement
         | MODULE ID LPAREN RPAREN statement
           { driver.modules.push_back(ModuleDecl($2,
               std::vector<AssignNode>(), driver.getBody(), @$)); }
-        | MODULE ID LPAREN parameter_list RPAREN statement
+        | MODULE ID LPAREN parameter_list optional_comma RPAREN statement
           { driver.modules.push_back(ModuleDecl($2, $4, driver.getBody(), @$)); }
         | END
         ;
 
 inner_input
-        : inner_input statement
+        : /* empty */
+        | inner_input statement
         ;
 
 module_instantiation
