@@ -155,14 +155,15 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 [\xc2\xa0\t ]           { loc.step(); }
 {NL}                    { loc.lines(); loc.step(); }
 <<EOF>>                 { if (driver.lexerFileEnd()) return Parser::make_END(loc); }
-"$"?([a-zA-Z0-9_]|{UNICODE})+ {
-  int length = numGraphemes(yytext);
-  // update location
-  loc.columns(abs(length) - yyleng);
-  // check if it is a valid identifier
-  if (length < 0)
-    throw Parser::syntax_error(loc, "Illegal identifier "s + yytext);
-  return Parser::make_TOK_ID(yytext, loc);
-}
-.                       throw Parser::syntax_error(loc, "Unexpected character "s + yytext);
+"$"?([a-zA-Z0-9_])+     { return Parser::make_TOK_ID(yytext, loc); }
+  /* unicode identifier fallback, slower but robust */
+"$"?({UNICODE})+        { int length = numGraphemes(yytext);
+                          // update location
+                          loc.columns(abs(length) - yyleng);
+                          // check if it is a valid identifier
+                          if (length < 0)
+                            throw Parser::syntax_error(loc, "Illegal identifier "s + yytext);
+                          return Parser::make_TOK_ID(yytext, loc); }
+.                       { throw Parser::syntax_error(loc,
+                            "Unexpected character "s + yytext); }
 
