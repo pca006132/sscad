@@ -20,7 +20,12 @@ int Driver::parse(FileHandle file) {
   return parser.parse();
 }
 
-void Driver::lexerInclude(std::string filename) {
+void Driver::addUse(const std::string &filename) {
+  FileHandle file = resolver(filename, location.begin.src);
+  uses.insert(file);
+}
+
+void Driver::lexerInclude(const std::string &filename) {
   FileHandle file = resolver(filename, location.begin.src);
   // avoid cyclic include by walking the include stack
   Location *loc = &location;

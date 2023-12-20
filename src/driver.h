@@ -54,7 +54,8 @@ class Driver {
     return ModuleBody(std::move(assignments), std::move(moduleCalls));
   }
 
-  void lexerInclude(std::string);
+  void addUse(const std::string&);
+  void lexerInclude(const std::string&);
   bool lexerFileEnd();
 };
 }  // namespace sscad

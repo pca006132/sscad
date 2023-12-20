@@ -60,11 +60,23 @@ loc.step();
 include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 <cond_include>{
 [^\t\r\n>]*             { stringcontents = yytext; loc.columns(abs(numGraphemes(yytext))); }
-">"                     { BEGIN(INITIAL); driver.lexerInclude(stringcontents); }
+">"                     { BEGIN(INITIAL); driver.lexerInclude(stringcontents); loc.step(); }
+\t
 [\n\r]                  { throw Parser::syntax_error(loc, "Newline in include statement"); }
 <<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated include statement"); }
 }
   /* include file END */
+
+  /* use file BEGIN */
+use[ \t\r\n]*"<"    { BEGIN(cond_use); loc.lines(yytext); }
+<cond_use>{
+[^\t\r\n>]*             { stringcontents = yytext; loc.columns(abs(numGraphemes(yytext))); }
+">"                     { BEGIN(INITIAL); driver.addUse(stringcontents); loc.step(); }
+\t
+[\n\r]                  { throw Parser::syntax_error(loc, "Newline in use statement"); }
+<<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated use statement"); }
+}
+  /* use file END */
 
   /* quoted string BEGIN */
 \"                      { BEGIN(cond_string); stringcontents.clear(); }
@@ -93,7 +105,7 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
   /* single-line comment BEGIN */
 \/\/                    { BEGIN(cond_lcomment); }
 <cond_lcomment>{
-{NL}                    { BEGIN(INITIAL); loc.lines(); }
+{NL}                    { BEGIN(INITIAL); loc.lines(); loc.step(); }
 {UNICODE}               { int unicodeLength = abs(numGraphemes(yytext));
                           loc.columns(unicodeLength); }
 .
@@ -104,10 +116,11 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
   /* multi-lines comment BEGIN */
 "/*"                    { BEGIN(cond_comment); }
 <cond_comment>{
-"*/"                    { BEGIN(INITIAL); }
+"*/"                    { BEGIN(INITIAL); loc.step(); }
 {NL}                    { loc.lines(); }
 {UNICODE}               { int unicodeLength = abs(numGraphemes(yytext));
                           loc.columns(unicodeLength); }
+.
 <<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated comment"); }
 }
   /* multi-lines comment END */
@@ -165,9 +178,8 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 [\xc2\xa0\t ]           { loc.step(); }
 {NL}                    { loc.lines(); loc.step(); }
 <<EOF>>                 { if (driver.lexerFileEnd()) return Parser::make_END(loc); }
-"$"?([a-zA-Z0-9_])+     { return Parser::make_ID(yytext, loc); }
   /* unicode identifier fallback, slower but robust */
-("$"?([a-zA-Z0-9_]|{UNICODE})+) {
+"$"?([a-zA-Z0-9_]|{UNICODE})+ {
                           int length = numGraphemes(yytext);
                           // update location
                           loc.columns(abs(length) - yyleng);
@@ -175,6 +187,5 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
                           if (length < 0)
                             throw Parser::syntax_error(loc, "Illegal identifier "s + yytext);
                           return Parser::make_ID(yytext, loc); }
-.                       { throw Parser::syntax_error(loc,
-                            "Unexpected character "s + yytext); }
+.                       { throw Parser::syntax_error(loc, "Unexpected character "s + yytext); }
 
