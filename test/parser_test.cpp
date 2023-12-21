@@ -106,10 +106,12 @@ void printAST(const Node *node) {
   } else if (const auto single = dynamic_cast<const SingleModuleCall *>(node)) {
     std::cout << "ModuleCall(" << single->name << ", "
               << "args=(";
+    bool start = true;
     for (const auto &assign : single->args) {
+      if (!start) std::cout << ",";
+      start = false;
       if (!assign.ident.empty()) std::cout << assign.ident << "=";
       f(assign.expr.get());
-      std::cout << ",";
     }
     std::cout << "), body=";
     printBody(single->body);
@@ -170,10 +172,12 @@ void printAST(const Node *node) {
     std::cout << "Call(";
     f(call->fun.get());
     std::cout << ", args=(";
+    bool start = true;
     for (const auto &assign : call->args) {
+      if (!start) std::cout << ",";
+      start = false;
       if (!assign.ident.empty()) std::cout << assign.ident << "=";
       f(assign.expr.get());
-      std::cout << ",";
     }
     std::cout << "), loc=" << call->loc << ")";
   } else {
@@ -183,14 +187,17 @@ void printAST(const Node *node) {
 
 void printBody(const ModuleBody &body) {
   std::cout << "[";
+  bool start = true;
   for (const auto assign : body.assignments) {
+    if (!start) std::cout << ",";
+    start = false;
     std::cout << assign.ident << " = ";
     printAST(assign.expr.get());
-    std::cout << ",";
   }
   for (const auto child : body.children) {
+    if (!start) std::cout << ",";
+    start = false;
     printAST(child.get());
-    std::cout << ",";
   }
   std::cout << "]";
 }
