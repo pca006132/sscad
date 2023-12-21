@@ -53,11 +53,11 @@ struct Location {
   }
 };
 
-inline std::ostream& operator<<(std::ostream& o,
-                                const Location::Position& pos) {
-  return o << pos.src << ":" << pos.line << ":" << pos.column;
-}
-inline std::ostream& operator<<(std::ostream& o, const Location& loc) {
-  return o << loc.begin << " - " << loc.end;
-}
+// inline std::ostream& operator<<(std::ostream& o,
+//                                 const Location::Position& pos) {
+//   return o << pos.src << ":" << pos.line << ":" << pos.column;
+// }
+// inline std::ostream& operator<<(std::ostream& o, const Location& loc) {
+//   return o << loc.begin << " - " << loc.end;
+// }
 }  // namespace sscad

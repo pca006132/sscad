@@ -16,6 +16,9 @@
  */
 #pragma once
 
+#include <istream>
+#include <stack>
+
 #ifndef yyFlexLexerOnce
 #undef yyFlexLexer
 #define yyFlexLexer sscad_FlexLexer
@@ -26,31 +29,38 @@
 #undef YY_DECL
 #define YY_DECL sscad::Parser::symbol_type sscad::Scanner::getNextToken()
 
-using namespace std::string_literals;
-
 namespace U_ICU_NAMESPACE {
 class BreakIterator;
 }
 
 namespace sscad {
-class Driver;
+struct TranslationUnit;
+class Frontend;
 
 class Scanner : public yyFlexLexer {
  public:
-  Scanner(Driver &driver);
+  Scanner(Frontend &frontend, TranslationUnit &unit,
+          std::unique_ptr<std::istream> istream);
   virtual ~Scanner();
   virtual sscad::Parser::symbol_type getNextToken();
 
  private:
-  Driver &driver;
+  Frontend &frontend;
+  TranslationUnit &unit;
+
   std::string stringcontents;
   U_ICU_NAMESPACE::BreakIterator *brkiter;
+  Location loc;
+  std::stack<std::unique_ptr<std::istream>> istreams;
 
   // negative if the string is not a valid identifier
   int numGraphemes(const char *str);
-  Parser::symbol_type parseNumber(const std::string &str,
-                                  const Location loc) const;
-  std::string toUTF8(int c) const;
+  static Parser::symbol_type parseNumber(const std::string &str,
+                                         const Location loc);
+  static std::string toUTF8(int c);
+  void addUse(const std::string &);
+  void lexerInclude(const std::string &);
+  bool lexerFileEnd();
 };
 
 }  // namespace sscad

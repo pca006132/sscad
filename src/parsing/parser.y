@@ -34,31 +34,31 @@
 %define parse.error detailed
 %define parse.lac full
 %lex-param { sscad::Scanner &scanner }
-%lex-param { sscad::Driver &driver }
 %parse-param { sscad::Scanner &scanner }
-%parse-param { sscad::Driver &driver }
+%parse-param { sscad::TranslationUnit &unit}
 
 %code requires {
 #include "ast.h"
 
 namespace sscad {
   class Scanner;
-  class Driver;
+  struct TranslationUnit;
 }
 }
 
 %code top{
-#include <iostream>
-#include <stack>
-#include "driver.h"
+#include "frontend.h"
+#include "parsing/scanner.h"
 
 using namespace sscad;
 #define YYMAXDEPTH 20000
-#define yylex(scanner, driver) scanner.getNextToken()
+#define yylex(scanner) scanner.getNextToken()
 std::shared_ptr<ModuleCall> makeModifier(
    std::string modifier,
    std::shared_ptr<ModuleCall> child,
    Location loc);
+static std::ostream& operator<<(std::ostream& o, const Location::Position& pos);
+static std::ostream& operator<<(std::ostream& o, const Location& loc);
 }
 
 %token MODULE FUNCTION IF ELSE FOR LET EACH
@@ -82,6 +82,7 @@ std::shared_ptr<ModuleCall> makeModifier(
 %left MUL DIV MOD
 %left EXP
 
+%type <ModuleBody> child_statement child_statements
 %type <std::shared_ptr<IfModule>> if_statement ifelse_statement
 %type <std::shared_ptr<SingleModuleCall>> single_module_instantiation 
 %type <std::shared_ptr<ModuleCall>> module_instantiation
@@ -89,7 +90,7 @@ std::shared_ptr<ModuleCall> makeModifier(
 %type <Expr> expr call unary primary exponent
 %type <std::string> module_id
 %type <std::vector<AssignNode>> argument_list parameter_list
-%type <AssignNode> argument parameter
+%type <AssignNode> argument parameter assignment
 
 %%
 
@@ -101,12 +102,12 @@ statement
         : SEMI
         | LBRACE inner_input RBRACE
         | module_instantiation
-          { driver.moduleCalls.push_back($1); }
-        | MODULE ID LPAREN RPAREN statement
-          { driver.modules.push_back(ModuleDecl($2,
-              std::vector<AssignNode>(), driver.getBody(), @$)); }
-        | MODULE ID LPAREN parameter_list optional_comma RPAREN statement
-          { driver.modules.push_back(ModuleDecl($2, $4, driver.getBody(), @$)); }
+          { unit.moduleCalls.push_back($1); }
+        | MODULE ID LPAREN RPAREN child_statement
+          { unit.modules.push_back(ModuleDecl($2,
+              std::vector<AssignNode>(), $5, @$)); }
+        | MODULE ID LPAREN parameter_list optional_comma RPAREN child_statement
+          { unit.modules.push_back(ModuleDecl($2, $4, $7, @$)); }
         ;
 
 inner_input
@@ -126,42 +127,52 @@ module_instantiation
           { $$ = nullptr; }
         | single_module_instantiation child_statement
           { auto mod = $1;
-            mod->body = driver.getBody();
+            mod->body = $2;
             $$ = mod; }
         | ifelse_statement
           { $$ = $1; }
         ;
 
 ifelse_statement
-        : if_statement %prec NO_ELSE
-          { $$ = $1; }
-        | if_statement ELSE child_statement
+        : if_statement ELSE child_statement
           { $$ = $1;
-            $$->ifelse = driver.getBody(); }
+            $$->ifelse = $3; }
+        | if_statement %prec NO_ELSE
+          { $$ = $1; }
         ;
 
 if_statement
         : IF LPAREN expr RPAREN child_statement
-          { auto body = driver.getBody();
-            $$ = std::make_shared<IfModule>($3, body, ModuleBody(), @$); }
+          { $$ = std::make_shared<IfModule>($3, $5, ModuleBody(), @$); }
         ;
 
 assignment
         : ID EQ expr SEMI
-          { driver.assignments.push_back(AssignNode($1, $3, @$)); }
+          { $$ = AssignNode($1, $3, @$); }
         ;
 
 child_statements
         : /* empty */
+          { $$ = ModuleBody(); }
         | child_statements child_statement
+          { $$ = $1;
+            auto body = $2;
+            $$.assignments.insert($$.assignments.end(),
+                body.assignments.begin(), body.assignments.end());
+            $$.children.insert($$.children.end(),
+                body.children.begin(), body.children.end()); }
         | child_statements assignment
+          { $$ = $1;
+            $$.assignments.push_back($2); }
         ;
 
 child_statement
         : SEMI
+          { $$ = ModuleBody(); }
         | LBRACE child_statements RBRACE
+          { $$ = $2; }
         | module_instantiation
-          { driver.moduleCalls.push_back($1); }
+          { $$ = ModuleBody(std::vector<AssignNode>(), {$1}); }
         ;
 
 single_module_instantiation
@@ -245,3 +256,13 @@ std::shared_ptr<ModuleCall> makeModifier(
 void sscad::Parser::error(const Location &loc, const std::string &message) {
   throw sscad::Parser::syntax_error(loc, message);
 }
+
+static std::ostream& operator<<(std::ostream& o,
+                                const Location::Position& pos) {
+  return o << pos.src << ":" << pos.line << ":" << pos.column;
+}
+
+static std::ostream& operator<<(std::ostream& o, const Location& loc) {
+  return o << loc.begin << " - " << loc.end;
+}
+

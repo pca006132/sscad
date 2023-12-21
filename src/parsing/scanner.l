@@ -27,8 +27,8 @@
 %option noyywrap
 %{
 #include <cstdlib>
-#include "driver.h"
-#include "scanner.h"
+#include "frontend.h"
+#include "parsing/scanner.h"
 
 using namespace sscad;
 using namespace std::string_literals;
@@ -52,7 +52,6 @@ NL      \n|\r\n|\r
 %%
 
 %{
-Location& loc = driver.location;
 loc.step();
 %}
 
@@ -60,7 +59,7 @@ loc.step();
 include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 <cond_include>{
 [^\t\r\n>]*             { stringcontents = yytext; loc.columns(abs(numGraphemes(yytext))); }
-">"                     { BEGIN(INITIAL); driver.lexerInclude(stringcontents); }
+">"                     { BEGIN(INITIAL); lexerInclude(stringcontents); }
 \t
 [\n\r]                  { throw Parser::syntax_error(loc, "Newline in include statement"); }
 <<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated include statement"); }
@@ -71,7 +70,7 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 use[ \t\r\n]*"<"    { BEGIN(cond_use); loc.lines(yytext); }
 <cond_use>{
 [^\t\r\n>]*             { stringcontents = yytext; loc.columns(abs(numGraphemes(yytext))); }
-">"                     { BEGIN(INITIAL); driver.addUse(stringcontents); loc.step(); }
+">"                     { BEGIN(INITIAL); addUse(stringcontents); loc.step(); }
 \t
 [\n\r]                  { throw Parser::syntax_error(loc, "Newline in use statement"); }
 <<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated use statement"); }
@@ -110,7 +109,7 @@ use[ \t\r\n]*"<"    { BEGIN(cond_use); loc.lines(yytext); }
                           loc.columns(unicodeLength); }
 .
 <<EOF>>                 { BEGIN(INITIAL);
-                          if (driver.lexerFileEnd())
+                          if (lexerFileEnd())
                             return Parser::make_END(loc);
                           else
                             loc.step(); }
@@ -181,7 +180,7 @@ use[ \t\r\n]*"<"    { BEGIN(cond_use); loc.lines(yytext); }
   /* supports no-break space U+00A0 (UTF-8 encoded: C2A0) as well as other spaces */
 [\xc2\xa0\t ]           { loc.step(); }
 {NL}                    { loc.lines(); loc.step(); }
-<<EOF>>                 { if (driver.lexerFileEnd()) return Parser::make_END(loc); }
+<<EOF>>                 { if (lexerFileEnd()) return Parser::make_END(loc); }
   /* unicode identifier fallback, slower but robust */
 "$"?([a-zA-Z0-9_]|{UNICODE})+ {
                           int length = numGraphemes(yytext);

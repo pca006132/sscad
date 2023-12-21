@@ -16,15 +16,36 @@
  */
 #pragma once
 #include <functional>
-#include <stack>
-#include <string>
+#include <unordered_map>
 #include <unordered_set>
 
-#include "scanner.h"
+#include "ast.h"
 
-// TODO: split into translation unit class
 namespace sscad {
-class Driver {
+class Scanner;
+
+/**
+ * A translation unit, usually a single file but can include other files.
+ * File scope variables are actually translation unit scoped.
+ */
+struct TranslationUnit {
+  TranslationUnit(FileHandle file) : file(file) {}
+
+  std::unordered_set<FileHandle> uses;
+  std::vector<ModuleDecl> modules;
+  std::vector<AssignNode> assignments;
+  std::vector<std::shared_ptr<ModuleCall>> moduleCalls;
+  FileHandle file;
+
+  ModuleBody getBody() {
+    return ModuleBody(std::move(assignments), std::move(moduleCalls));
+  }
+};
+
+/**
+ * Parser frontend that handles use etc.
+ */
+class Frontend {
  public:
   // first parameter: filename to be included/used
   // second parameter: source file handle for the include/use statement
@@ -32,31 +53,15 @@ class Driver {
   // provide the input stream given a file handle
   using FileProvider = std::function<std::unique_ptr<std::istream>(FileHandle)>;
 
-  Driver(FileResolver resolver, FileProvider provider);
+  Frontend(FileResolver resolver, FileProvider provider);
 
-  int parse(FileHandle file);
-  friend class Parser;
-  friend class Scanner;
+  TranslationUnit& parse(FileHandle file);
+  std::unordered_map<FileHandle, TranslationUnit> units;
+
+  friend Scanner;
 
  private:
-  Scanner scanner;
-  Parser parser;
-  Location location;
   FileProvider provider;
   FileResolver resolver;
-  std::stack<std::unique_ptr<std::istream>> istreams;
-
-  std::unordered_set<FileHandle> uses;
-  std::vector<ModuleDecl> modules;
-  std::vector<AssignNode> assignments;
-  std::vector<std::shared_ptr<ModuleCall>> moduleCalls;
-
-  ModuleBody getBody() {
-    return ModuleBody(std::move(assignments), std::move(moduleCalls));
-  }
-
-  void addUse(const std::string&);
-  void lexerInclude(const std::string&);
-  bool lexerFileEnd();
 };
 }  // namespace sscad
