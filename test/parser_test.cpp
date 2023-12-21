@@ -111,8 +111,9 @@ void printAST(const Node *node) {
       f(assign.expr.get());
       std::cout << ",";
     }
-    std::cout << "), loc=" << single->loc << ")";
+    std::cout << "), body=";
     printBody(single->body);
+    std::cout << ", loc=" << single->loc << ")";
   } else if (const auto ifmodule = dynamic_cast<const IfModule *>(node)) {
     std::cout << "If(cond=";
     f(ifmodule->args[0].expr.get());
@@ -181,24 +182,17 @@ void printAST(const Node *node) {
 }
 
 void printBody(const ModuleBody &body) {
-  if (body.assignments.empty() && body.children.empty()) {
-    std::cout << ";";
-  } else if (body.assignments.empty() && body.children.size() == 1) {
-    printAST(body.children[0].get());
-    std::cout << ";";
-  } else {
-    std::cout << "{" << std::endl;
-    for (const auto assign : body.assignments) {
-      std::cout << assign.ident << " = ";
-      printAST(assign.expr.get());
-      std::cout << ";";
-    }
-    for (const auto child : body.children) {
-      printAST(child.get());
-      std::cout << ";";
-    }
-    std::cout << "}" << std::endl;
+  std::cout << "[";
+  for (const auto assign : body.assignments) {
+    std::cout << assign.ident << " = ";
+    printAST(assign.expr.get());
+    std::cout << ",";
   }
+  for (const auto child : body.children) {
+    printAST(child.get());
+    std::cout << ",";
+  }
+  std::cout << "]";
 }
 
 void printUnit(const TranslationUnit &unit) {
@@ -230,7 +224,7 @@ int main() {
                  "echo(foo + naïve);\n"
                  "foo2(123) { cube(); }\n"
                  "module foo2(a, b = 2) { cube(); children(); }\n"
-                 "if (1+1==2) cube();\n"
+                 "*if (1+1==2) cube();\n"
                  "if (1+1==2) { a(); } else { b(); }";
         break;
       case 2:

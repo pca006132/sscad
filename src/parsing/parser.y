@@ -94,7 +94,9 @@ statement
         : SEMI
         | LBRACE inner_input RBRACE
         | module_instantiation
-          { unit.moduleCalls.push_back($1); }
+          { auto m = $1;
+            if (m != nullptr)
+              unit.moduleCalls.push_back(m); }
         | MODULE ID LPAREN RPAREN child_statement
           { unit.modules.push_back(ModuleDecl($2,
               std::vector<AssignNode>(), $5, @$)); }
@@ -107,6 +109,7 @@ inner_input
         | inner_input statement
         ;
 
+  /* note that only module_instantiation can give nullptr... */
 module_instantiation
         : NOT module_instantiation
           { $$ = makeModifier("!", $2, @$); }
@@ -164,7 +167,9 @@ child_statement
         | LBRACE child_statements RBRACE
           { $$ = $2; }
         | module_instantiation
-          { $$ = ModuleBody(std::vector<AssignNode>(), {$1}); }
+          { auto m = $1;
+            if (m == nullptr) $$ = ModuleBody();
+            else $$ = ModuleBody(std::vector<AssignNode>(), {m}); }
         ;
 
 single_module_instantiation
