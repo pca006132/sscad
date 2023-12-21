@@ -85,8 +85,7 @@ void Scanner::lexerInclude(const std::string &filename) {
   while (true) {
     if (file == locPtr->begin.src)
       throw Parser::syntax_error(loc, "recursive include detected");
-    if (locPtr->begin.parent == nullptr)
-      break;
+    if (locPtr->begin.parent == nullptr) break;
     locPtr = locPtr->begin.parent.get();
   }
   const auto parent = std::make_shared<Location>(loc);
