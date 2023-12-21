@@ -48,6 +48,8 @@ enum ValueTag : char {
   // A 64-bit pointer to a struct, with a 32-bit integer reference count,
   // 32-bit padding and a 64-bit pointer to the underlying geometry object
   // (provided by the user).
+  // The pointer can be a nullptr (0) if the module is empty. This avoids asking
+  // the user for an empty object pointer.
   // Aligned to 8-bytes.
   Geometry = 0x3,
   // Range iterator
