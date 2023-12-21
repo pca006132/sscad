@@ -36,10 +36,6 @@ struct TranslationUnit {
   std::vector<AssignNode> assignments;
   std::vector<std::shared_ptr<ModuleCall>> moduleCalls;
   FileHandle file;
-
-  ModuleBody getBody() {
-    return ModuleBody(std::move(assignments), std::move(moduleCalls));
-  }
 };
 
 /**
