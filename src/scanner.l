@@ -60,7 +60,7 @@ loc.step();
 include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
 <cond_include>{
 [^\t\r\n>]*             { stringcontents = yytext; loc.columns(abs(numGraphemes(yytext))); }
-">"                     { BEGIN(INITIAL); driver.lexerInclude(stringcontents); loc.step(); }
+">"                     { BEGIN(INITIAL); driver.lexerInclude(stringcontents); }
 \t
 [\n\r]                  { throw Parser::syntax_error(loc, "Newline in include statement"); }
 <<EOF>>                 { throw Parser::syntax_error(loc, "Unterminated include statement"); }
@@ -89,7 +89,7 @@ use[ \t\r\n]*"<"    { BEGIN(cond_use); loc.lines(yytext); }
 \\x[0-7]{H}             { unsigned long i = std::strtoul(yytext + 2, NULL, 16);
                           stringcontents += (i == 0 ? ' ' : (unsigned char)(i & 0xff)); }
 \\u{H}{4}|\\U{H}{6}     { char32_t c = std::strtoul(yytext + 2, NULL, 16);
-                          stringcontents += converter.to_bytes(c); }
+                          stringcontents += toUTF8(c); }
 [^\\\r\n\"]             { stringcontents += yytext; }
 {NL}                    { loc.lines(); }
 {UNICODE}               { stringcontents += yytext;
@@ -109,7 +109,11 @@ use[ \t\r\n]*"<"    { BEGIN(cond_use); loc.lines(yytext); }
 {UNICODE}               { int unicodeLength = abs(numGraphemes(yytext));
                           loc.columns(unicodeLength); }
 .
-<<EOF>>                 { BEGIN(INITIAL); if (driver.lexerFileEnd()) return Parser::make_END(loc); }
+<<EOF>>                 { BEGIN(INITIAL);
+                          if (driver.lexerFileEnd())
+                            return Parser::make_END(loc);
+                          else
+                            loc.step(); }
 }
   /* single-line comment END */
 

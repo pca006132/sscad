@@ -31,7 +31,7 @@ int Driver::parse(FileHandle file) {
       {nullptr, file, 1, 1},
       {nullptr, file, 1, 1},
   };
-  scanner.switch_streams(&*stream);
+  scanner.switch_streams(stream.get());
   istreams.push(std::move(stream));
   return parser.parse();
 }
@@ -48,12 +48,12 @@ void Driver::lexerInclude(const std::string &filename) {
   while (loc) {
     if (file == loc->begin.src)
       throw Parser::syntax_error(location, "recursive include detected");
-    loc = &*loc->begin.parent;
+    loc = loc->begin.parent.get();
   }
   const auto parent = std::make_shared<Location>(location);
   auto stream = provider(file);
   assert(stream != nullptr);
-  scanner.switch_streams(&*stream);
+  scanner.switch_streams(stream.get());
   istreams.push(std::move(stream));
   location = Location{
       {parent, file, 1, 1},
@@ -68,7 +68,7 @@ bool Driver::lexerFileEnd() {
   if (istreams.empty()) return true;
   assert(location.begin.parent != nullptr);
   location = *location.begin.parent;
-  scanner.switch_streams(&*istreams.top());
+  scanner.switch_streams(istreams.top().get());
   return false;
 }
 }  // namespace sscad

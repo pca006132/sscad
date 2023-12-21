@@ -22,6 +22,7 @@
 
 #include "scanner.h"
 
+// TODO: split into translation unit class
 namespace sscad {
 class Driver {
  public:

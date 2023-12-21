@@ -16,7 +16,6 @@
  */
 #pragma once
 #include <functional>
-#include <sstream>
 #include <vector>
 
 #include "location.h"
