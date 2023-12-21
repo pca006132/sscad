@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 namespace sscad {
+// TODO: Use structs for things other than Array, we don't need that good
+// performance for other stuff.
 /**
  * Value tag representing the type for certain values.
  * The value itself is stored *tagless* in the memory, 64-bit each. When stored
