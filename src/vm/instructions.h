@@ -16,6 +16,8 @@
 #include <cstdint>
 namespace sscad {
 
+constexpr unsigned char NO_IMMEDIATE_START = 0x10;
+// instructions with the I suffix: uses immediate value
 // immediate value: next byte if it is not 0xFF,
 // next 4 bytes as int32 otherwise.
 // Next instruction location depends on the next byte,
@@ -23,25 +25,9 @@ namespace sscad {
 // index = current + 6 otherwise.
 //
 // For instructions without immediate values, it is just index + 1.
-enum Instruction : char {
+enum class Instruction : unsigned char {
   // add an constant constant to the top of the stack.
-  AddI,
-  // negate the top of the stack.
-  Negation,
-  // logical not the top of the stack,
-  // performs conversion to boolean if necessary.
-  LogicalNot,
-  // rhs = stack.pop(), stack.top() = stack.top() OP rhs.
-  // the next char is the binary operation.
-  BinaryOp,
-  // push a constant double to the top of the stack.
-  // the next 8 bytes in machine endian represents the double.
-  // next instruction index: current + 9
-  ConstNum,
-  // push an undef value to the top of the stack if the next byte is 2,
-  // true if the next byte is 1, and false if the next byte is 0.
-  // next instruction index: current + 2
-  ConstMisc,
+  AddI = 0,
   // copy and push the i-th local to the top of the stack.
   // note that the i-th parameter of the function is also the i-th local.
   GetI,
@@ -54,24 +40,57 @@ enum Instruction : char {
   // copy and push the i-th local in the parent scope to the top of the stack.
   // used for module children statements
   GetParentI,
-  // pop and discard the value in the top of the stack
-  Pop,
-  // duplicate and push the value in the top of the stack
-  Dup,
   // jump n bytes relative to the current instruction
   // e.g. if the current instruction is at index 0 and the immediate is 4,
   // the next instruction to be executed is at index 4.
   JumpI,
   // pop the top of the stack, jump n bytes relative current instruction if it
-  // is zero, and go to the next instruction normally otherwise.
-  JumpZeroI,
-  // return the top value of the stack
-  Ret,
+  // is true, and go to the next instruction normally otherwise.
+  JumpTrueI,
   // call the function with ID i
   CallI,
-  // call the module with ID i
-  // note that this is different from function call due to how module stack is
-  // setup (for GetParentI)
-  CallModuleI,
+
+  // unary operation that directly modifies the top of the stack
+  // the next char is an enum for the builtin operation
+  BuiltinUnaryOp = NO_IMMEDIATE_START,
+  // rhs = stack.pop(), stack.top() = stack.top() OP rhs.
+  // the next char is the binary operation.
+  BinaryOp,
+  // push a constant double to the top of the stack.
+  // the next 8 bytes in machine endian represents the double.
+  // next instruction index: current + 9
+  ConstNum,
+  // push an undef value to the top of the stack if the next byte is 2,
+  // true if the next byte is 1, and false if the next byte is 0.
+  // next instruction index: current + 2
+  ConstMisc,
+  // pop and discard the value in the top of the stack
+  Pop,
+  // duplicate and push the value in the top of the stack
+  Dup,
+  // return the top value of the stack
+  Ret,
+  // just for debugging for now
+  Echo
 };
-}
+
+enum class BuiltinUnary : unsigned char {
+  NOT,
+  NEG,
+  SIN,
+  COS,
+  TAN,
+  ASIN,
+  ACOS,
+  ATAN,
+  ABS,
+  CEIL,
+  FLOOR,
+  LN,
+  LOG,
+  NORM,
+  ROUND,
+  SIGN,
+  SQRT
+};
+}  // namespace sscad

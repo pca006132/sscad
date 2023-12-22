@@ -41,7 +41,10 @@ FLEX_TARGET(Scanner src/parsing/scanner.l
 
 ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 
-add_library(sscad src/parsing/frontend.cpp src/parsing/scanner_helper.cpp
+add_library(sscad
+    src/parsing/frontend.cpp
+    src/parsing/scanner_helper.cpp
+    src/vm/evaluator.cpp
     ${BISON_Parser_OUTPUTS} ${FLEX_Scanner_OUTPUTS})
 target_include_directories(sscad PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(sscad PUBLIC src)

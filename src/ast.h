@@ -140,8 +140,23 @@ class ModuleDecl final : public Node {
   }
 };
 
-enum UnaryOp : char { NEG, NOT };
-enum BinOp : char { ADD, SUB, MUL, DIV, MOD, EXP, LT, LE, GT, GE, EQ, NEQ, AND, OR };
+enum class UnaryOp : unsigned char { NEG, NOT };
+enum class BinOp : unsigned char {
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  MOD,
+  EXP,
+  LT,
+  LE,
+  GT,
+  GE,
+  EQ,
+  NEQ,
+  AND,
+  OR
+};
 
 void UnaryToString(std::stringstream &ss, UnaryOp op);
 void BinaryToString(std::stringstream &ss, BinOp op);

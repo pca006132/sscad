@@ -15,7 +15,7 @@
  */
 #include "frontend.h"
 
-#include "parsing/scanner.h"
+#include "scanner.h"
 
 namespace sscad {
 

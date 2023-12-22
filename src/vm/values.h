@@ -19,6 +19,7 @@
 
 namespace sscad {
 // handle for geometry object
+// note that 0 represents the empty object
 using SGeometry = long;
 
 /**
