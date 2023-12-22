@@ -46,6 +46,6 @@ add_library(sscad src/parsing/frontend.cpp src/parsing/scanner_helper.cpp
 target_include_directories(sscad PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(sscad PUBLIC src)
 target_link_libraries(sscad PRIVATE ICU::uc)
-target_compile_features(sscad PRIVATE cxx_std_17)
+target_compile_features(sscad PUBLIC cxx_std_17)
 
 add_subdirectory(test)

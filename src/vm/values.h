@@ -13,9 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <cstdint>
+#include <string>
+#include <vector>
+
 namespace sscad {
-// TODO: Use structs for things other than Array, we don't need that good
-// performance for other stuff.
+// handle for geometry object
+using SGeometry = long;
+
 /**
  * Value tag representing the type for certain values.
  * The value itself is stored *tagless* in the memory, 64-bit each. When stored
@@ -32,20 +37,11 @@ namespace sscad {
  * reference is not unique.
  */
 enum ValueTag : char {
-  // A 64-bit pointer to a continuous buffer, containing a 32-bit integer
-  // reference count, followed by a null-terminated utf-8 C string.
-  String = 0x0,
+  STRING = 0x0,
   // The normal heterogeneous vector in OpenSCAD.
-  // A 64-bit pointer to a continuous buffer, containing a 32-bit integer
-  // reference count, followed by a 32-bit length counter (N), a 32-bit capacity
-  // counter (C), N 8-bit tags, some padding and N 64-bit values.
-  // The padding is calculated such that the 64-bit values are aligned to
-  // 8-bytes and larger than C - N.
-  // The total capacity is doubled when reallocated, this provides amortized
-  // constant-time insertion performance when the usage is unique.
-  // Note that capacity is the number of values inside, not the total size of
-  // the buffer.
-  Vector,
+  VECTOR,
+  // Range iterator
+  RANGE,
   // Specialized 1D/2D number vector. For the 2D case it must be a valid matrix,
   // i.e. all inner vectors should have the same length. The idea is to keep
   // arrays as arrays if possible, and degenerate to a vector when user tries to
@@ -58,31 +54,51 @@ enum ValueTag : char {
   // 64-bit floating point numbers in row major order.
   // The total capacity is doubled when reallocated, this provides amortized
   // constant-time insertion performance when the usage is unique.
-  Array,
-  // Geometry objects returned by modules.
   //
-  // A 64-bit pointer to a struct, with a 32-bit integer reference count,
-  // 32-bit padding and a 64-bit pointer to the underlying geometry object
-  // (provided by the user).
-  // The pointer can be a nullptr (0) if the module is empty. This avoids asking
-  // the user for an empty object pointer.
-  Geometry,
-  // Range iterator
-  //
-  // A 64-bit pointer to a struct, with a 32-bit integer reference count, 32-bit
-  // padding, and three 64-bit floating point values representing start, end and
-  // step.
-  Range,
-
+  // TODO: Unimplemented for now
+  ARRAY,
   // ============================================================================
   // Just a 64-bit floating point number, nothing special.
-  Number = 0x10,
+  NUMBER = 0x10,
+  // Handle for geometry objects returned by modules.
+  // Note that we never need to destruct this.
+  GEOMETRY,
   // Just undef, the value has no meaning.
-  Undef,
+  UNDEF,
   // A 64-bit value to represent boolean, with true = 1 and false = 0.
-  Boolean,
+  BOOLEAN,
 };
 
-constexpr bool isAllocated(ValueTag tag) { return (tag & 0xF0) == 0; }
+constexpr bool isAllocated(ValueTag tag) { return tag >= 0x10; }
+
+struct SVector;
+struct SRange;
+
+/**
+ * We are using untagged union here, so we have to handle the object destruction
+ * by ourselves.
+ * This is necessary because std::variant is huge, 24 bytes (with
+ * std::shared_ptr) compared to the untagged union here (8 bytes).
+ */
+union SValue {
+  double number;
+  SGeometry geometry;
+  bool cond;
+  std::string* s;
+  SVector* vec;
+  SRange* range;
+  unsigned char* array;
+};
+
+struct SVector {
+  std::vector<ValueTag> tags;
+  std::vector<SValue> values;
+};
+
+struct SRange {
+  double begin;
+  double end;
+  double step;
+};
 
 }  // namespace sscad
