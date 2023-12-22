@@ -150,15 +150,15 @@ ValuePair Evaluator::eval(int id) {
       }
       case Instruction::GetGlobalI: {
         saveTop();
-        if (immediate < 0 || immediate >= tagStack.size()) invalid();
-        top = std::make_pair(tagStack[immediate], valueStack[immediate]);
+        if (immediate < 0 || immediate >= globalTags.size()) invalid();
+        top = std::make_pair(globalTags[immediate], globalValues[immediate]);
         pc += offset;
         break;
       }
       case Instruction::SetGlobalI: {
-        if (immediate < 0 || immediate >= tagStack.size()) invalid();
-        tagStack[immediate] = top.first;
-        valueStack[immediate] = top.second;
+        if (immediate < 0 || immediate >= globalTags.size()) invalid();
+        globalTags[immediate] = top.first;
+        globalValues[immediate] = top.second;
         top = popSecond();
         pc += offset;
         break;
