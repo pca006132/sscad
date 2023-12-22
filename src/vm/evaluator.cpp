@@ -129,7 +129,9 @@ ValuePair Evaluator::eval(int id) {
     valueStack.push_back(top.second);
   };
 
+  int counter = 0;
   while (pc < fn->instructions.size()) {
+    counter++;
     // std::cout << "pc: " << pc << std::endl;
     auto [immediate, offset] = (fn->instructions[pc] >= NO_IMMEDIATE_START)
                                    ? std::make_pair(0, 0)
@@ -266,7 +268,10 @@ ValuePair Evaluator::eval(int id) {
         }
         tagStack.resize(sp + 1);
         valueStack.resize(sp + 1);
-        if (pcStack.size() == 1) return top;
+        if (pcStack.size() == 1) {
+          *ostream << "instructions executed: " << counter << std::endl;
+          return top;
+        }
         fn = &functions[rpStack.back()];
         if (fn->isModule) moduleSpStack.pop_back();
         pc = pcStack.back();

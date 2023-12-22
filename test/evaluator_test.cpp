@@ -47,7 +47,7 @@ void addBinOp(std::vector<unsigned char> &instructions, BinOp op) {
 int main() {
   std::vector<unsigned char> list1;
   addInst(list1, Instruction::ConstNum);
-  addDouble(list1, 10000000);
+  addDouble(list1, 10000000000);
   addInst(list1, Instruction::ConstNum);
   addDouble(list1, 12.34);
   int looppc = list1.size();
