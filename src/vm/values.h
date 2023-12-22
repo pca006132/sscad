@@ -85,6 +85,7 @@ union SValue {
   SGeometry geometry;
   bool cond;
   std::string* s;
+  // if vec equals NULL, the list is an empty list
   SVector* vec;
   SRange* range;
   unsigned char* array;
