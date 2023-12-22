@@ -53,10 +53,10 @@ std::pair<int, int> getImmediate(const FunctionEntry *entry, int currentPC) {
                                                    currentPC + 1);
     return std::make_pair(*p, 2);
   }
-  if (UNLIKELY(currentPC + 6 >= entry->instructions.size())) invalid();
+  if (UNLIKELY(currentPC + 5 >= entry->instructions.size())) invalid();
   int p;
   memcpy(&p, entry->instructions.data() + currentPC + 2, sizeof(int));
-  return std::make_pair(p, 5);
+  return std::make_pair(p, 6);
 }
 
 ValuePair handleUnary(ValuePair v, BuiltinUnary op) {
@@ -76,7 +76,25 @@ ValuePair handleUnary(ValuePair v, BuiltinUnary op) {
 }
 
 ValuePair handleBinary(ValuePair lhs, ValuePair rhs, BinOp op) {
+  bool equal = false;
   switch (op) {
+    case BinOp::LT:
+    case BinOp::LE:
+      std::swap(lhs, rhs);
+      equal = op == BinOp::LE;
+      [[fallthrough]];
+    case BinOp::GT:
+    case BinOp::GE: {
+      if (lhs.first != ValueTag::NUMBER || rhs.first != ValueTag::NUMBER) {
+        drop(lhs);
+        drop(rhs);
+        return std::make_pair(ValueTag::UNDEF, SValue());
+      }
+      if (op == BinOp::GE) equal = true;
+      bool result = lhs.second.number > rhs.second.number ||
+                    (equal && lhs.second.number == rhs.second.number);
+      return std::make_pair(ValueTag::BOOLEAN, SValue{.cond = result});
+    }
     default:
       unimplemented();
   }
@@ -112,6 +130,7 @@ ValuePair Evaluator::eval(int id) {
   };
 
   while (pc < fn->instructions.size()) {
+    // std::cout << "pc: " << pc << std::endl;
     auto [immediate, offset] = (fn->instructions[pc] >= NO_IMMEDIATE_START)
                                    ? std::make_pair(0, 0)
                                    : getImmediate(fn, pc);
@@ -171,6 +190,7 @@ ValuePair Evaluator::eval(int id) {
           // boolean cast
           if (top.first != ValueTag::BOOLEAN) unimplemented();
           if (!top.second.cond) target = pc + offset;
+          top = popSecond();
         }
         pc = target;
         break;
@@ -182,8 +202,8 @@ ValuePair Evaluator::eval(int id) {
         pcStack.push_back(pc + offset);
         rpStack.push_back(immediate);
         spStack.push_back(valueStack.size() - fn->parameters);
-        pc = 0;
         if (fn->isModule) moduleSpStack.push_back(spStack.back());
+        pc = 0;
         break;
       }
       case Instruction::BuiltinUnaryOp: {
@@ -207,7 +227,7 @@ ValuePair Evaluator::eval(int id) {
         memcpy(&v, fn->instructions.data() + pc + 1, sizeof(double));
         saveTop();
         top = std::make_pair(ValueTag::NUMBER, SValue{.number = v});
-        pc += 2;
+        pc += sizeof(double) + 1;
         break;
       }
       case Instruction::ConstMisc: {
@@ -229,10 +249,12 @@ ValuePair Evaluator::eval(int id) {
       case Instruction::Pop: {
         drop(top);
         top = popSecond();
+        pc += 1;
         break;
       }
       case Instruction::Dup: {
         saveTop();
+        pc += 1;
         break;
       }
       case Instruction::Ret: {
@@ -253,7 +275,8 @@ ValuePair Evaluator::eval(int id) {
       }
       case Instruction::Echo: {
         if (top.first != ValueTag::NUMBER) unimplemented();
-        std::cout << top.second.number << std::endl;
+        *ostream << top.second.number << std::endl;
+        pc += 1;
         break;
       }
       default:

@@ -15,3 +15,5 @@
 add_executable(parserTest parser_test.cpp)
 target_link_libraries(parserTest sscad)
 
+add_executable(evalTest evaluator_test.cpp)
+target_link_libraries(evalTest sscad)

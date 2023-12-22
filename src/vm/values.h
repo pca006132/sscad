@@ -70,7 +70,7 @@ enum ValueTag : char {
   BOOLEAN,
 };
 
-constexpr bool isAllocated(ValueTag tag) { return tag >= 0x10; }
+constexpr bool isAllocated(ValueTag tag) { return tag < 0x10; }
 
 struct SVector;
 struct SRange;

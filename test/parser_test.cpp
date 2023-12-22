@@ -89,7 +89,7 @@ inline std::ostream &operator<<(std::ostream &os,
 }
 
 inline std::ostream &operator<<(std::ostream &os, const Location &loc) {
-  return os << "L(" << loc.begin << "," << loc.end << ")";
+  return os << "(" << loc.begin << "," << loc.end << ")";
 }
 
 void printBody(const ModuleBody &body);
