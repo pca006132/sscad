@@ -129,8 +129,8 @@ ValuePair Evaluator::eval(int id) {
     valueStack.push_back(top.second);
   };
 
-  int counter = 0;
-  while (pc < fn->instructions.size()) {
+  long counter = 0;
+  while (pc < fn->instructions.size() && flag.load(std::memory_order_relaxed)) {
     counter++;
     // std::cout << "pc: " << pc << std::endl;
     auto [immediate, offset] = (fn->instructions[pc] >= NO_IMMEDIATE_START)
@@ -288,6 +288,10 @@ ValuePair Evaluator::eval(int id) {
         throw std::runtime_error("unknown bytecode "s +
                                  toHex(fn->instructions.size()));
     }
+  }
+  if (!flag.load(std::memory_order_relaxed)) {
+    *ostream << "instructions executed: " << counter << std::endl;
+    return std::make_pair(ValueTag::UNDEF, SValue());
   }
   throw std::runtime_error("evaluator stuck");
 }

@@ -16,12 +16,16 @@
 
 #include "vm/evaluator.h"
 
+#include <chrono>
 #include <cstring>
+#include <future>
 #include <iostream>
+#include <thread>
 
 #include "ast.h"
 
 using namespace sscad;
+using namespace std::chrono_literals;
 
 void addInst(std::vector<unsigned char> &instructions, Instruction i) {
   instructions.push_back(static_cast<unsigned char>(i));
@@ -46,8 +50,9 @@ void addBinOp(std::vector<unsigned char> &instructions, BinOp op) {
 
 int main() {
   std::vector<unsigned char> list1;
+  // this number is stored as the 1-st local...
   addInst(list1, Instruction::ConstNum);
-  addDouble(list1, 10000000000);
+  addDouble(list1, 100000000000);
   addInst(list1, Instruction::ConstNum);
   addDouble(list1, 12.34);
   int looppc = list1.size();
@@ -66,7 +71,13 @@ int main() {
 
   addInst(list1, Instruction::Echo);
   addInst(list1, Instruction::Ret);
+
   Evaluator evaluator(&std::cout, {FunctionEntry{list1, 0, false}}, {}, {});
+  auto future = std::async(std::launch::async, [&] {
+    std::this_thread::sleep_for(3s);
+    std::cout << "stopping" << std::endl;
+    evaluator.stop();
+  });
   evaluator.eval(0);
   return 0;
 }

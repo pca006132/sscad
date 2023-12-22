@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <atomic>
 #include <ostream>
 
 #include "instructions.h"
@@ -36,11 +37,13 @@ class Evaluator {
         globalValues(globalValues) {}
 
   ValuePair eval(int id);
+  void stop() { flag.store(false, std::memory_order_relaxed); }
 
  private:
   std::ostream *ostream;
   std::vector<FunctionEntry> functions;
   std::vector<ValueTag> globalTags;
   std::vector<SValue> globalValues;
+  std::atomic<bool> flag = true;
 };
 }  // namespace sscad

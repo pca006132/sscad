@@ -14,6 +14,8 @@
 
 add_executable(parserTest parser_test.cpp)
 target_link_libraries(parserTest sscad)
+target_compile_features(parserTest PUBLIC cxx_std_17)
 
 add_executable(evalTest evaluator_test.cpp)
 target_link_libraries(evalTest sscad)
+target_compile_features(evalTest PUBLIC cxx_std_17)
