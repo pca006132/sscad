@@ -34,9 +34,11 @@ constexpr char toHex(char n) {
 #if defined(__GNUC__)
 #define LIKELY(cond) __builtin_expect((cond), 1)
 #define UNLIKELY(cond) __builtin_expect((cond), 0)
+#define HOT __attribute__((hot))
 #else
 #define LIKELY(cond) (cond)
 #define UNLIKELY(cond) (cond)
+#define HOT
 #endif
 
 void invalid() { throw std::runtime_error("invalid bytecode"); }
@@ -46,7 +48,8 @@ inline void drop(ValuePair v) {
 }
 
 // return actual value and the pc increment for next function
-std::pair<int, int> getImmediate(const FunctionEntry *entry, int currentPC) {
+HOT std::pair<int, int> getImmediate(const FunctionEntry *entry,
+                                     int currentPC) {
   if (UNLIKELY(currentPC + 1 >= entry->instructions.size())) invalid();
   if (LIKELY(entry->instructions[currentPC + 1] != 0xFF)) {
     const char *p = reinterpret_cast<const char *>(entry->instructions.data() +

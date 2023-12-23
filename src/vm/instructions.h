@@ -31,15 +31,15 @@ enum class Instruction : unsigned char {
   // copy and push the i-th local to the top of the stack.
   // note that the i-th parameter of the function is also the i-th local.
   GetI,
+  // copy and push the i-th local in the parent scope to the top of the stack.
+  // used for module children statements
+  GetParentI,
   // pop and set the i-th local as the top of the stack.
   SetI,
   // copy and push the i-th global to the top of the stack.
   GetGlobalI,
   // pop and set the i-th global as the top of the stack.
   SetGlobalI,
-  // copy and push the i-th local in the parent scope to the top of the stack.
-  // used for module children statements
-  GetParentI,
   // jump n bytes relative to the current instruction
   // e.g. if the current instruction is at index 0 and the immediate is 4,
   // the next instruction to be executed is at index 4.
