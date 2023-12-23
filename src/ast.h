@@ -21,22 +21,11 @@
 namespace sscad {
 
 enum class UnaryOp : unsigned char { NEG, NOT };
+// clang-format off
 enum class BinOp : unsigned char {
-  ADD,
-  SUB,
-  MUL,
-  DIV,
-  MOD,
-  EXP,
-  LT,
-  LE,
-  GT,
-  GE,
-  EQ,
-  NEQ,
-  AND,
-  OR
-};
+  ADD, SUB, MUL, DIV, MOD, EXP,
+  LT, LE, GT, GE, EQ, NEQ, AND, OR };
+// clang-format one
 
 inline std::ostream &operator<<(std::ostream &os, UnaryOp op) {
   switch (op) {

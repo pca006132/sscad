@@ -79,25 +79,12 @@ enum class Instruction : unsigned char {
   Echo
 };
 
+// clang-format off
 enum class BuiltinUnary : unsigned char {
-  NOT,
-  NEG,
-  SIN,
-  COS,
-  TAN,
-  ASIN,
-  ACOS,
-  ATAN,
-  ABS,
-  CEIL,
-  FLOOR,
-  LN,
-  LOG,
-  NORM,
-  ROUND,
-  SIGN,
-  SQRT
+  NOT, NEG, SIN, COS, TAN, ASIN, ACOS, ATAN, ABS,
+  CEIL, FLOOR, LN, LOG, NORM, ROUND, SIGN, SQRT
 };
+// clang-format on
 
 void addInst(std::vector<unsigned char> &instructions, Instruction i);
 void addInst(std::vector<unsigned char> &instructions, Instruction i, int imm);
