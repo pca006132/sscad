@@ -43,6 +43,11 @@ constexpr char toHex(char n) {
 
 void invalid() { throw std::runtime_error("invalid bytecode"); }
 
+inline ValuePair copy(ValuePair v) {
+  if (isAllocated(v.first)) unimplemented();
+  return v;
+}
+
 inline void drop(ValuePair v) {
   if (isAllocated(v.first)) unimplemented();
 }
@@ -164,7 +169,7 @@ ValuePair Evaluator::eval(int id) {
                          : moduleSpStack[moduleSpStack.size() - 2]) +
                     immediate;
         if (index < 0 || index >= tagStack.size()) invalid();
-        top = std::make_pair(tagStack[index], valueStack[index]);
+        top = copy(std::make_pair(tagStack[index], valueStack[index]));
         pc += offset;
         break;
       }
@@ -180,7 +185,8 @@ ValuePair Evaluator::eval(int id) {
       case Instruction::GetGlobalI: {
         saveTop();
         if (immediate < 0 || immediate >= globalTags.size()) invalid();
-        top = std::make_pair(globalTags[immediate], globalValues[immediate]);
+        top = copy(
+            std::make_pair(globalTags[immediate], globalValues[immediate]));
         pc += offset;
         break;
       }
@@ -287,6 +293,7 @@ ValuePair Evaluator::eval(int id) {
       }
       case Instruction::Dup: {
         saveTop();
+        top = copy(top);
         pc += 1;
         break;
       }
