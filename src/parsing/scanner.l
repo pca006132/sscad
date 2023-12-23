@@ -133,6 +133,8 @@ use[ \t\r\n]*"<"    { BEGIN(cond_use); loc.lines(yytext); }
 "let"                   return Parser::make_LET(loc);
 "for"                   return Parser::make_FOR(loc);
 "each"                  return Parser::make_EACH(loc);
+"echo"                  return Parser::make_ECHO(loc);
+"assert"                return Parser::make_ASSERT(loc);
 "true"                  return Parser::make_TRUE(loc);
 "false"                 return Parser::make_FALSE(loc);
 "undef"                 return Parser::make_UNDEF(loc);

@@ -138,8 +138,8 @@ void AstPrinter::visit(ModuleDecl &module) {
   for (const auto &assign : module.args) {
     if (!start) *ostream << ",";
     start = false;
-    if (!assign.ident.empty()) *ostream << assign.ident << "=";
-    assign.expr->visit(*this);
+    *ostream << assign.ident << "=";
+    if (assign.expr != nullptr) assign.expr->visit(*this);
   }
   *ostream << "), ";
   visit(module.body);
@@ -152,8 +152,8 @@ void AstPrinter::visit(FunctionDecl &fun) {
   for (const auto &assign : fun.args) {
     if (!start) *ostream << ",";
     start = false;
-    if (!assign.ident.empty()) *ostream << assign.ident << "=";
-    assign.expr->visit(*this);
+    *ostream << assign.ident << "=";
+    if (assign.expr != nullptr) assign.expr->visit(*this);
   }
   *ostream << "), ";
   fun.body->visit(*this);
@@ -239,10 +239,22 @@ void AstPrinter::visit(IfExprNode &ifcond) {
 }
 
 void AstPrinter::visit(TranslationUnit &unit) {
+  *ostream << "modules:" << std::endl;
+  for (auto &module : unit.modules) {
+    visit(module);
+    *ostream << std::endl;
+  }
+  *ostream << "functions:" << std::endl;
+  for (auto &fun : unit.functions) {
+    visit(fun);
+    *ostream << std::endl;
+  }
+  *ostream << "assignments:" << std::endl;
   for (auto &assign : unit.assignments) {
     visit(assign);
     *ostream << std::endl;
   }
+  *ostream << "module calls:" << std::endl;
   for (auto &call : unit.moduleCalls) {
     call->visit(*this);
     *ostream << std::endl;

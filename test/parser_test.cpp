@@ -17,7 +17,6 @@
 #include <iostream>
 #include <sstream>
 
-#include "ast.h"
 #include "frontend.h"
 
 using namespace sscad;
@@ -35,7 +34,8 @@ int main() {
     auto ss = std::make_unique<std::stringstream>();
     switch (src) {
       case 0:
-        (*ss) << "echo(a + b(123, c = 456));";
+        (*ss) << "echo(a + b(123, c = 456));\n"
+                 "function foo(x) = x + 1;";
         break;
       case 1:
         (*ss) << "include<a>\n"
@@ -43,7 +43,7 @@ int main() {
                  "foo2(123) { cube(); }\n"
                  "module foo2(a, b = 2) { cube(); children(); }\n"
                  "*if (1+1==2) cube();\n"
-                 "if (1+1==2) { a(); } else { b(); }";
+                 "if (1+1==2) { a(foo() ? x : y + 2); } else { b(); }";
         break;
       case 2:
         (*ss) << "echo(a * b + c * d > 12 && foo ^ bar);\r\n"

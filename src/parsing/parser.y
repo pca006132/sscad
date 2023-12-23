@@ -51,7 +51,7 @@ std::shared_ptr<ModuleCall> makeModifier(
    Location loc);
 }
 
-%token MODULE FUNCTION IF ELSE FOR LET EACH
+%token MODULE FUNCTION IF ELSE FOR LET EACH ASSERT ECHO
 %token TRUE FALSE UNDEF
 %token END 0 "EOF"
 %token NOT COMMA ASSIGN LPAREN RPAREN COLON SEMI QUESTION
@@ -77,7 +77,7 @@ std::shared_ptr<ModuleCall> makeModifier(
 %type <std::shared_ptr<SingleModuleCall>> single_module_instantiation 
 %type <std::shared_ptr<ModuleCall>> module_instantiation
 %type <BinOp> binop
-%type <Expr> expr call unary primary exponent
+%type <Expr> expr call binary unary primary exponent
 %type <std::string> module_id
 %type <std::vector<AssignNode>> argument_list parameter_list
 %type <AssignNode> argument parameter assignment
@@ -96,10 +96,13 @@ statement
             if (m != nullptr)
               unit.moduleCalls.push_back(m); }
         | MODULE ID LPAREN RPAREN child_statement
-          { unit.modules.push_back(ModuleDecl($2,
-              std::vector<AssignNode>(), $5, @$)); }
+          { unit.modules.emplace_back($2, std::vector<AssignNode>(), $5, @$); }
         | MODULE ID LPAREN parameter_list optional_comma RPAREN child_statement
-          { unit.modules.push_back(ModuleDecl($2, $4, $7, @$)); }
+          { unit.modules.emplace_back($2, $4, $7, @$); }
+        | FUNCTION ID LPAREN RPAREN ASSIGN expr SEMI
+          { unit.functions.emplace_back($2, std::vector<AssignNode>(), $6, @$); }
+        | FUNCTION ID LPAREN parameter_list optional_comma RPAREN ASSIGN expr SEMI
+          { unit.functions.emplace_back($2, $4, $8, @$); }
         ;
 
 inner_input
@@ -178,8 +181,16 @@ single_module_instantiation
         { $$ = std::make_shared<SingleModuleCall>($1, $3, ModuleBody(), @$); }
         ;
 
-expr    : unary
-        | expr binop unary { $$ = std::make_shared<BinaryOpNode>($1, $3, $2, @$);}
+expr    : binary
+        | binary QUESTION expr COLON expr
+          { $$ = std::make_shared<IfExprNode>($1, $3, $5, @$); }
+          /* ECHO and ASSERT requires list support,
+             the plan is to make them special functions that take two arguments,
+             one in the form of a list and one for return */
+        ;
+
+binary  : unary
+        | binary binop unary { $$ = std::make_shared<BinaryOpNode>($1, $3, $2, @$);}
         ;
 
 unary   : exponent
@@ -230,6 +241,8 @@ module_id      : ID                             { $$ = $1; }
                | FOR                            { $$ = "for"; }
                | LET                            { $$ = "let"; }
                | EACH                           { $$ = "each"; }
+               | ASSERT                         { $$ = "assert"; }
+               | ECHO                           { $$ = "echo"; }
                ;
 
 binop   : AND | OR | EQ | NEQ | GT | GE | LT | LE | ADD | SUB | MUL | DIV | MOD;
