@@ -32,6 +32,7 @@ struct TranslationUnit {
 
   std::unordered_set<FileHandle> uses;
   std::vector<ModuleDecl> modules;
+  std::vector<FunctionDecl> functions;
   std::vector<AssignNode> assignments;
   std::vector<std::shared_ptr<ModuleCall>> moduleCalls;
   FileHandle file;

@@ -49,8 +49,6 @@ std::shared_ptr<ModuleCall> makeModifier(
    std::string modifier,
    std::shared_ptr<ModuleCall> child,
    Location loc);
-static std::ostream& operator<<(std::ostream& o, const Location::Position& pos);
-static std::ostream& operator<<(std::ostream& o, const Location& loc);
 }
 
 %token MODULE FUNCTION IF ELSE FOR LET EACH
@@ -253,13 +251,3 @@ std::shared_ptr<ModuleCall> makeModifier(
 void sscad::Parser::error(const Location &loc, const std::string &message) {
   throw sscad::Parser::syntax_error(loc, message);
 }
-
-static std::ostream& operator<<(std::ostream& o,
-                                const Location::Position& pos) {
-  return o << pos.src << ":" << pos.line << ":" << pos.column;
-}
-
-static std::ostream& operator<<(std::ostream& o, const Location& loc) {
-  return o << loc.begin << " - " << loc.end;
-}
-

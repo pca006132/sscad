@@ -40,7 +40,7 @@ struct Location {
     if (count) end.column = 1;
     end.line += count;
   }
-  void lines(const std::string& text) {
+  void lines(const std::string &text) {
     for (size_t i = 0; i < text.length(); ++i) {
       if (text[i] == '\r' && i + 1 < text.length() && text[i + 1] == '\n') {
         end.line++;
@@ -51,4 +51,13 @@ struct Location {
     }
   }
 };
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const Location::Position &pos) {
+  return os << pos.src << ":" << pos.line << ":" << pos.column;
+}
+
+inline std::ostream &operator<<(std::ostream &os, const Location &loc) {
+  return os << "(" << loc.begin << "," << loc.end << ")";
+}
 }  // namespace sscad

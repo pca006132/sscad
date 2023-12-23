@@ -20,6 +20,84 @@
 #include "location.h"
 namespace sscad {
 
+enum class UnaryOp : unsigned char { NEG, NOT };
+enum class BinOp : unsigned char {
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  MOD,
+  EXP,
+  LT,
+  LE,
+  GT,
+  GE,
+  EQ,
+  NEQ,
+  AND,
+  OR
+};
+
+inline std::ostream &operator<<(std::ostream &os, UnaryOp op) {
+  switch (op) {
+    case UnaryOp::NEG:
+      os << "-";
+      break;
+    case UnaryOp::NOT:
+      os << "!";
+      break;
+  }
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os, BinOp op) {
+  switch (op) {
+    case BinOp::ADD:
+      os << "+";
+      break;
+    case BinOp::SUB:
+      os << "-";
+      break;
+    case BinOp::MUL:
+      os << "*";
+      break;
+    case BinOp::DIV:
+      os << "/";
+      break;
+    case BinOp::MOD:
+      os << "%";
+      break;
+    case BinOp::EXP:
+      os << "^";
+      break;
+    case BinOp::LT:
+      os << "<";
+      break;
+    case BinOp::LE:
+      os << "<=";
+      break;
+    case BinOp::GT:
+      os << ">";
+      break;
+    case BinOp::GE:
+      os << ">=";
+      break;
+    case BinOp::EQ:
+      os << "=";
+      break;
+    case BinOp::NEQ:
+      os << "!=";
+      break;
+    case BinOp::AND:
+      os << "&&";
+      break;
+    case BinOp::OR:
+      os << "||";
+      break;
+  }
+  return os;
+}
+
 struct Node {
  public:
   Node(Location loc) : loc(loc) {}
@@ -122,22 +200,18 @@ struct ModuleDecl final : public Node {
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-enum class UnaryOp : unsigned char { NEG, NOT };
-enum class BinOp : unsigned char {
-  ADD,
-  SUB,
-  MUL,
-  DIV,
-  MOD,
-  EXP,
-  LT,
-  LE,
-  GT,
-  GE,
-  EQ,
-  NEQ,
-  AND,
-  OR
+struct FunctionDecl final : public Node {
+ public:
+  FunctionDecl(std::string name, std::vector<AssignNode> args, Expr body,
+               Location loc)
+      : name(name), args(args), body(body), Node(loc) {}
+
+  std::string name;
+  // arguments with no default value have expr=nullptr
+  std::vector<AssignNode> args;
+  Expr body;
+
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
 struct NumberNode final : public ExprNode {
@@ -209,9 +283,9 @@ struct CallNode final : public ExprNode {
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-struct CondNode final : public ExprNode {
+struct IfExprNode final : public ExprNode {
  public:
-  CondNode(Expr cond, Expr ifthen, Expr ifelse, Location loc)
+  IfExprNode(Expr cond, Expr ifthen, Expr ifelse, Location loc)
       : cond(cond), ifthen(ifthen), ifelse(ifelse), ExprNode(loc) {}
 
   Expr cond;
