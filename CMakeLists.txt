@@ -45,6 +45,7 @@ FLEX_TARGET(Scanner src/parsing/scanner.l
 ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 
 add_library(sscad
+    src/ast_visitor.cpp
     src/parsing/frontend.cpp
     src/parsing/scanner_helper.cpp
     src/vm/evaluator.cpp

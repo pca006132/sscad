@@ -14,29 +14,29 @@
  * limitations under the License.
  */
 #pragma once
-#include <functional>
 #include <vector>
 
+#include "ast_visitor.h"
 #include "location.h"
 namespace sscad {
 
-class Node {
+struct Node {
  public:
   Node(Location loc) : loc(loc) {}
 
   Location loc;
 
-  virtual void visit(std::function<void(Node *)> &f) = 0;
+  virtual void visit(AstVisitor &) = 0;
 };
 
-class ExprNode : public Node {
+struct ExprNode : public Node {
  public:
   ExprNode(Location loc) : Node(loc) {}
 };
 
 using Expr = std::shared_ptr<ExprNode>;
 
-class AssignNode final : public Node {
+struct AssignNode final : public Node {
  public:
   AssignNode() : ident(""), expr(nullptr), Node(Location{}) {}
   AssignNode(const std::string ident, Expr expr, Location loc)
@@ -45,12 +45,10 @@ class AssignNode final : public Node {
   std::string ident;
   Expr expr;
 
-  virtual void visit(std::function<void(Node *)> &f) override {
-    if (expr != nullptr) f(expr.get());
-  }
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class ModuleCall : public Node {
+struct ModuleCall : public Node {
  public:
   ModuleCall(const std::string name, std::vector<AssignNode> args, Location loc)
       : name(name), args(args), Node(loc) {}
@@ -60,7 +58,7 @@ class ModuleCall : public Node {
   std::vector<AssignNode> args;
 };
 
-class ModuleBody {
+struct ModuleBody {
  public:
   ModuleBody() = default;
   ModuleBody(std::vector<AssignNode> assignments,
@@ -72,28 +70,21 @@ class ModuleBody {
   // list of module calls, note that this includes echo and assert
   std::vector<std::shared_ptr<ModuleCall>> children;
 
-  void repr(std::stringstream &ss) const;
-  void visit(std::function<void(Node *)> &f) {
-    for (auto &iter : assignments) f(&iter);
-    for (auto &iter : children) f(iter.get());
-  }
+  void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class SingleModuleCall : public ModuleCall {
+struct SingleModuleCall : public ModuleCall {
  public:
   SingleModuleCall(const std::string name, std::vector<AssignNode> args,
                    ModuleBody body, Location loc)
       : body(body), ModuleCall(name, args, loc) {}
 
   ModuleBody body;
-  virtual void visit(std::function<void(Node *)> &f) override {
-    for (auto &iter : args) f(&iter);
-    body.visit(f);
-  }
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
 // if else module, then part is stored in ModuleCall::children
-class IfModule : public ModuleCall {
+struct IfModule : public ModuleCall {
  public:
   IfModule(Expr args, ModuleBody ifthen, ModuleBody ifelse, Location loc)
       : ifthen(ifthen),
@@ -103,14 +94,10 @@ class IfModule : public ModuleCall {
   ModuleBody ifthen;
   ModuleBody ifelse;
 
-  virtual void visit(std::function<void(Node *)> &f) override {
-    for (auto &iter : args) f(&iter);
-    ifthen.visit(f);
-    ifelse.visit(f);
-  }
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class ModuleModifier : public ModuleCall {
+struct ModuleModifier : public ModuleCall {
  public:
   ModuleModifier(std::string modifier, std::shared_ptr<ModuleCall> module,
                  Location loc)
@@ -118,12 +105,10 @@ class ModuleModifier : public ModuleCall {
 
   std::string modifier;
   std::shared_ptr<ModuleCall> module;
-  virtual void visit(std::function<void(Node *)> &f) override {
-    f(module.get());
-  }
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class ModuleDecl final : public Node {
+struct ModuleDecl final : public Node {
  public:
   ModuleDecl(std::string name, std::vector<AssignNode> args, ModuleBody body,
              Location loc)
@@ -134,10 +119,7 @@ class ModuleDecl final : public Node {
   std::vector<AssignNode> args;
   ModuleBody body;
 
-  virtual void visit(std::function<void(Node *)> &f) override {
-    for (auto &iter : args) f(&iter);
-    body.visit(f);
-  }
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
 enum class UnaryOp : unsigned char { NEG, NOT };
@@ -158,44 +140,41 @@ enum class BinOp : unsigned char {
   OR
 };
 
-void UnaryToString(std::stringstream &ss, UnaryOp op);
-void BinaryToString(std::stringstream &ss, BinOp op);
-
-class NumberNode final : public ExprNode {
+struct NumberNode final : public ExprNode {
  public:
   NumberNode(double value, Location loc) : value(value), ExprNode(loc) {}
 
   double value;
 
-  virtual void visit(std::function<void(Node *)> &f) override {}
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class StringNode final : public ExprNode {
+struct StringNode final : public ExprNode {
  public:
   StringNode(std::string str, Location loc) : str(str), ExprNode(loc) {}
 
   std::string str;
 
-  virtual void visit(std::function<void(Node *)> &f) override {}
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class UndefNode final : public ExprNode {
+struct UndefNode final : public ExprNode {
  public:
   UndefNode(Location loc) : ExprNode(loc) {}
 
-  virtual void visit(std::function<void(Node *)> &f) override {}
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class IdentNode : public ExprNode {
+struct IdentNode : public ExprNode {
  public:
   IdentNode(std::string name, Location loc) : name(name), ExprNode(loc) {}
 
   std::string name;
 
-  virtual void visit(std::function<void(Node *)> &f) override {}
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class UnaryOpNode final : public ExprNode {
+struct UnaryOpNode final : public ExprNode {
  public:
   UnaryOpNode(Expr operand, UnaryOp op, Location loc)
       : operand(operand), op(op), ExprNode(loc) {}
@@ -203,12 +182,10 @@ class UnaryOpNode final : public ExprNode {
   Expr operand;
   UnaryOp op;
 
-  virtual void visit(std::function<void(Node *)> &f) override {
-    f(operand.get());
-  }
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class BinaryOpNode final : public ExprNode {
+struct BinaryOpNode final : public ExprNode {
  public:
   BinaryOpNode(Expr lhs, Expr rhs, BinOp op, Location loc)
       : lhs(lhs), rhs(rhs), op(op), ExprNode(loc) {}
@@ -217,13 +194,10 @@ class BinaryOpNode final : public ExprNode {
   Expr rhs;
   BinOp op;
 
-  virtual void visit(std::function<void(Node *)> &f) override {
-    f(lhs.get());
-    f(rhs.get());
-  }
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-class CallNode final : public ExprNode {
+struct CallNode final : public ExprNode {
  public:
   CallNode(Expr fun, std::vector<AssignNode> args, Location loc)
       : fun(fun), args(args), ExprNode(loc) {}
@@ -232,10 +206,19 @@ class CallNode final : public ExprNode {
   // positional arguments have empty names
   std::vector<AssignNode> args;
 
-  virtual void visit(std::function<void(Node *)> &f) override {
-    f(fun.get());
-    for (auto &iter : args) f(&iter);
-  }
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
-// TODO: list, index, list comprehension, cond, lambda, etc.
+
+struct CondNode final : public ExprNode {
+ public:
+  CondNode(Expr cond, Expr ifthen, Expr ifelse, Location loc)
+      : cond(cond), ifthen(ifthen), ifelse(ifelse), ExprNode(loc) {}
+
+  Expr cond;
+  Expr ifthen;
+  Expr ifelse;
+
+  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+};
+// TODO: list, index, list comprehension, lambda, etc.
 }  // namespace sscad

@@ -92,128 +92,142 @@ inline std::ostream &operator<<(std::ostream &os, const Location &loc) {
   return os << "(" << loc.begin << "," << loc.end << ")";
 }
 
-void printBody(const ModuleBody &body);
+class AstPrinter : public AstVisitor {
+ public:
+  AstPrinter(std::ostream *ostream) : ostream(ostream) {}
 
-void printAST(const Node *node) {
-  std::function<void(const Node *)> f = printAST;
-  if (const auto assign = dynamic_cast<const AssignNode *>(node)) {
-    std::cout << "Assign(" << assign->ident << ", ";
-    if (assign->expr)
-      f(assign->expr.get());
+  void visit(AssignNode &assign) override {
+    *ostream << "Assign(" << assign.ident << ", ";
+    if (assign.expr != nullptr)
+      assign.expr->visit(*this);
     else
-      std::cout << "undef";
-    std::cout << ", loc=" << assign->loc << ")";
-  } else if (const auto single = dynamic_cast<const SingleModuleCall *>(node)) {
-    std::cout << "ModuleCall(" << single->name << ", "
-              << "args=(";
+      *ostream << "undef";
+    *ostream << ", loc=" << assign.loc << ")";
+  }
+  void visit(ModuleBody &body) override {
+    *ostream << "[";
     bool start = true;
-    for (const auto &assign : single->args) {
-      if (!start) std::cout << ",";
+    for (const auto assign : body.assignments) {
+      if (!start) *ostream << ",";
       start = false;
-      if (!assign.ident.empty()) std::cout << assign.ident << "=";
-      f(assign.expr.get());
+      *ostream << assign.ident << " = ";
+      assign.expr->visit(*this);
     }
-    std::cout << "), body=";
-    printBody(single->body);
-    std::cout << ", loc=" << single->loc << ")";
-  } else if (const auto ifmodule = dynamic_cast<const IfModule *>(node)) {
-    std::cout << "If(cond=";
-    f(ifmodule->args[0].expr.get());
-    std::cout << ", then=";
-    printBody(ifmodule->ifthen);
-    if (!ifmodule->ifelse.children.empty()) {
-      std::cout << ", else=";
-      printBody(ifmodule->ifelse);
+    for (const auto child : body.children) {
+      if (!start) *ostream << ",";
+      start = false;
+      child->visit(*this);
     }
-    std::cout << ", loc=" << ifmodule->loc << ")";
-  } else if (const auto modifier = dynamic_cast<const ModuleModifier *>(node)) {
-    std::cout << modifier->modifier;
-    printAST(modifier->module.get());
-  } else if (const auto number = dynamic_cast<const NumberNode *>(node)) {
-    std::cout << "Number(" << number->value << ", loc=" << number->loc << ")";
-  } else if (const auto str = dynamic_cast<const StringNode *>(node)) {
-    std::cout << "String(\"";
+    *ostream << "]";
+  }
+  void visit(SingleModuleCall &single) override {
+    *ostream << "ModuleCall(" << single.name << ", "
+             << "args=(";
+    bool start = true;
+    for (const auto &assign : single.args) {
+      if (!start) *ostream << ",";
+      start = false;
+      if (!assign.ident.empty()) *ostream << assign.ident << "=";
+      assign.expr->visit(*this);
+    }
+    *ostream << "), ";
+    if (!single.body.children.empty() || !single.body.assignments.empty()) {
+      *ostream << "body=";
+      single.body.visit(*this);
+      *ostream << ", ";
+    }
+    *ostream << "loc=" << single.loc << ")";
+  }
+  void visit(IfModule &ifmodule) override {
+    *ostream << "If(cond=";
+    ifmodule.args[0].expr->visit(*this);
+    *ostream << ", then=";
+    ifmodule.ifthen.visit(*this);
+    if (!ifmodule.ifelse.children.empty()) {
+      *ostream << ", else=";
+      ifmodule.ifelse.visit(*this);
+    }
+    *ostream << ", loc=" << ifmodule.loc << ")";
+  }
+  void visit(ModuleModifier &modifier) override {
+    *ostream << modifier.modifier;
+    modifier.module->visit(*this);
+  }
+  void visit(NumberNode &number) override {
+    *ostream << "Number(" << number.value << ", loc=" << number.loc << ")";
+  }
+  void visit(StringNode &str) override {
+    *ostream << "String(\"";
     // handle escaping
-    for (const char c : str->str) {
+    for (const char c : str.str) {
       switch (c) {
         case '\r':
-          std::cout << "\\r";
+          *ostream << "\\r";
           break;
         case '\n':
-          std::cout << "\\n";
+          *ostream << "\\n";
           break;
         case '"':
-          std::cout << "\\\"";
+          *ostream << "\\\"";
           break;
         case '\\':
-          std::cout << "\\\\";
+          *ostream << "\\\\";
           break;
         default:
-          std::cout << c;
+          *ostream << c;
           break;
       }
     }
-    std::cout << "\", loc=" << str->loc << ")";
-  } else if (dynamic_cast<const UndefNode *>(node)) {
-    std::cout << "undef";
-  } else if (const auto ident = dynamic_cast<const IdentNode *>(node)) {
-    std::cout << "Ident(" << ident->name << ", loc=" << ident->loc << ")";
-  } else if (const auto unary = dynamic_cast<const UnaryOpNode *>(node)) {
-    std::cout << "Unary(" << unary->op << ", ";
-    f(unary->operand.get());
-    std::cout << ", loc=" << unary->loc << ")";
-  } else if (const auto binary = dynamic_cast<const BinaryOpNode *>(node)) {
-    std::cout << "Binary(" << binary->op << ", ";
-    f(binary->lhs.get());
-    std::cout << ", ";
-    f(binary->rhs.get());
-    std::cout << ", loc=" << binary->loc << ")";
-  } else if (const auto call = dynamic_cast<const CallNode *>(node)) {
-    std::cout << "Call(";
-    f(call->fun.get());
-    std::cout << ", args=(";
+    *ostream << "\", loc=" << str.loc << ")";
+  }
+  void visit(UndefNode &undef) override {
+    *ostream << "Undef(loc=" << undef.loc << ")";
+  }
+  void visit(IdentNode &ident) override {
+    *ostream << "Ident(" << ident.name << ", loc=" << ident.loc << ")";
+  }
+  void visit(UnaryOpNode &unary) override {
+    *ostream << "Unary(" << unary.op << ", ";
+    unary.operand->visit(*this);
+    *ostream << ", loc=" << unary.loc << ")";
+  }
+  void visit(BinaryOpNode &binary) override {
+    *ostream << "Binary(" << binary.op << ", ";
+    binary.lhs->visit(*this);
+    *ostream << ", ";
+    binary.rhs->visit(*this);
+    *ostream << ", loc=" << binary.loc << ")";
+  }
+  void visit(CallNode &call) override {
+    *ostream << "Call(";
+    call.fun->visit(*this);
+    *ostream << ", args=(";
     bool start = true;
-    for (const auto &assign : call->args) {
-      if (!start) std::cout << ",";
+    for (const auto &assign : call.args) {
+      if (!start) *ostream << ",";
       start = false;
-      if (!assign.ident.empty()) std::cout << assign.ident << "=";
-      f(assign.expr.get());
+      if (!assign.ident.empty()) *ostream << assign.ident << "=";
+      assign.expr->visit(*this);
     }
-    std::cout << "), loc=" << call->loc << ")";
-  } else {
-    std::cout << "???";
+    *ostream << "), loc=" << call.loc << ")";
   }
-}
+  void visit(TranslationUnit &unit) {
+    for (auto &assign : unit.assignments) {
+      visit(assign);
+      *ostream << std::endl;
+    }
+    for (auto &call : unit.moduleCalls) {
+      call->visit(*this);
+      *ostream << std::endl;
+    }
+  }
 
-void printBody(const ModuleBody &body) {
-  std::cout << "[";
-  bool start = true;
-  for (const auto assign : body.assignments) {
-    if (!start) std::cout << ",";
-    start = false;
-    std::cout << assign.ident << " = ";
-    printAST(assign.expr.get());
-  }
-  for (const auto child : body.children) {
-    if (!start) std::cout << ",";
-    start = false;
-    printAST(child.get());
-  }
-  std::cout << "]";
-}
-
-void printUnit(const TranslationUnit &unit) {
-  for (const auto &assign : unit.assignments) {
-    printAST(&assign);
-    std::cout << std::endl;
-  }
-  for (const auto &call : unit.moduleCalls) {
-    printAST(call.get());
-    std::cout << std::endl;
-  }
-}
+ private:
+  std::ostream *ostream;
+};
 
 int main() {
+  auto printer = AstPrinter(&std::cout);
   auto resolver = [](std::string name, sscad::FileHandle src) {
     if (name == "a") return 0;
     if (name == "b") return 1;
@@ -244,11 +258,11 @@ int main() {
 
   Frontend fe(resolver, provider);
   try {
-    printUnit(fe.parse(0));
+    printer.visit(fe.parse(0));
     std::cout << "===================" << std::endl;
-    printUnit(fe.parse(1));
+    printer.visit(fe.parse(1));
     std::cout << "===================" << std::endl;
-    printUnit(fe.parse(2));
+    printer.visit(fe.parse(2));
   } catch (const std::exception &e) {
     std::cout << e.what() << std::endl;
   }
