@@ -193,13 +193,13 @@ ValuePair Evaluator::eval(int id) {
         break;
       }
       case Instruction::JumpI:
-      case Instruction::JumpTrueI: {
+      case Instruction::JumpFalseI: {
         int target = pc + immediate;
         if (target < 0 || target >= fn->instructions.size()) invalid();
-        if (inst == Instruction::JumpTrueI) {
+        if (inst == Instruction::JumpFalseI) {
           // boolean cast
           if (top.first != ValueTag::BOOLEAN) unimplemented();
-          if (!top.second.cond) target = pc + offset;
+          if (top.second.cond) target = pc + offset;
           top = popSecond();
         }
         pc = target;

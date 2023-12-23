@@ -48,8 +48,8 @@ enum class Instruction : unsigned char {
   // the next instruction to be executed is at index 4.
   JumpI,
   // pop the top of the stack, jump n bytes relative current instruction if it
-  // is true, and go to the next instruction normally otherwise.
-  JumpTrueI,
+  // is false, and go to the next instruction normally otherwise.
+  JumpFalseI,
   // call the function with ID i
   CallI,
   // call the function with ID i

@@ -48,9 +48,9 @@ int main() {
   addInst(list1, Instruction::AddI, 200);
   addInst(list1, Instruction::Dup);
   addInst(list1, Instruction::GetI, 0);
-  addBinOp(list1, BinOp::LE);
+  addBinOp(list1, BinOp::GT);
   int currentIndex = list1.size();
-  addInst(list1, Instruction::JumpTrueI, looppc - currentIndex);
+  addInst(list1, Instruction::JumpFalseI, looppc - currentIndex);
   addInst(list1, Instruction::Echo);
   addInst(list1, Instruction::Ret);
 
@@ -62,8 +62,8 @@ int main() {
   std::vector<unsigned char> foo;
   addInst(foo, Instruction::GetI, 0);
   addInst(foo, Instruction::Dup, 0);
-  addBinOp(foo, BinOp::LE);
-  addInst(foo, Instruction::JumpTrueI, useTailcall ? 10 : 11);
+  addBinOp(foo, BinOp::GT);
+  addInst(foo, Instruction::JumpFalseI, useTailcall ? 10 : 11);
   addInst(foo, Instruction::AddI, -1);
   addInst(foo, Instruction::GetI, 1);
   addInst(foo, Instruction::AddI, 2);
@@ -88,7 +88,7 @@ int main() {
    *     sum += 2;
    * }
    */
-  constexpr bool doEcho = true;
+  constexpr bool doEcho = false;
   std::vector<unsigned char> pureloop;
   addDouble(pureloop, 100);
   addDouble(pureloop, 100000);
@@ -97,8 +97,8 @@ int main() {
   addInst(pureloop, Instruction::GetI, 2);
   addInst(pureloop, Instruction::Dup);
   addInst(pureloop, Instruction::GetI, 0);
-  addBinOp(pureloop, BinOp::LT);
-  addInst(pureloop, Instruction::JumpTrueI, 3);
+  addBinOp(pureloop, BinOp::GE);
+  addInst(pureloop, Instruction::JumpFalseI, 3);
   addInst(pureloop, Instruction::Ret);
   addInst(pureloop, Instruction::AddI, 1);
   addInst(pureloop, Instruction::SetI, 2);
@@ -106,12 +106,12 @@ int main() {
   int pureloopInner = pureloop.size();
   addInst(pureloop, Instruction::Dup);
   addInst(pureloop, Instruction::GetI, 1);
-  addBinOp(pureloop, BinOp::LT);
-  addInst(pureloop, Instruction::JumpTrueI, 4 + (doEcho?1:0));
+  addBinOp(pureloop, BinOp::GE);
+  addInst(pureloop, Instruction::JumpFalseI, 4 + (doEcho?1:0));
   if (doEcho)
     addInst(pureloop, Instruction::Echo);
   addInst(pureloop, Instruction::JumpI, pureloopOuter - pureloop.size());
-  addInst(pureloop, Instruction::AddI, 2);
+  addInst(pureloop, Instruction::AddI, 1);
   addInst(pureloop, Instruction::JumpI, pureloopInner - pureloop.size());
 
   Evaluator evaluator(
