@@ -29,8 +29,11 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT EMSCRIPTEN)
 endif()
 
 find_package(BISON REQUIRED)
+message("Bison version: ${BISON_VERSION}")
 find_package(FLEX REQUIRED)
+message("Flex version: ${FLEX_VERSION}")
 find_package(ICU COMPONENTS uc REQUIRED)
+message("ICU version: ${ICU_VERSION}")
 
 BISON_TARGET(Parser src/parsing/parser.y
              ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp
@@ -45,6 +48,7 @@ add_library(sscad
     src/parsing/frontend.cpp
     src/parsing/scanner_helper.cpp
     src/vm/evaluator.cpp
+    src/vm/instructions.cpp
     ${BISON_Parser_OUTPUTS} ${FLEX_Scanner_OUTPUTS})
 target_include_directories(sscad PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(sscad PUBLIC src)

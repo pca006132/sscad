@@ -15,9 +15,9 @@
  */
 #include "evaluator.h"
 
-#include <memory.h>
-
+#include <cstring>
 #include <iostream>
+#include <iterator>
 
 #include "ast.h"
 
@@ -51,10 +51,10 @@ inline void drop(ValuePair v) {
 HOT std::pair<int, int> getImmediate(const FunctionEntry *entry,
                                      int currentPC) {
   if (UNLIKELY(currentPC + 1 >= entry->instructions.size())) invalid();
-  if (LIKELY(entry->instructions[currentPC + 1] != 0xFF)) {
+  if (LIKELY(entry->instructions[currentPC + 1] != 0x80)) {
     const char *p = reinterpret_cast<const char *>(entry->instructions.data() +
                                                    currentPC + 1);
-    return std::make_pair(*p, 2);
+    return std::make_pair(static_cast<int>(*p), 2);
   }
   if (UNLIKELY(currentPC + 5 >= entry->instructions.size())) invalid();
   int p;
@@ -207,12 +207,34 @@ ValuePair Evaluator::eval(int id) {
       }
       case Instruction::CallI: {
         if (immediate >= functions.size()) invalid();
-        const auto *fn = &functions[immediate];
+        fn = &functions[immediate];
         saveTop();
         pcStack.push_back(pc + offset);
         rpStack.push_back(immediate);
         spStack.push_back(valueStack.size() - fn->parameters);
         if (fn->isModule) moduleSpStack.push_back(spStack.back());
+        pc = 0;
+        notop = true;
+        break;
+      }
+      case Instruction::TailCallI: {
+        if (immediate >= functions.size()) invalid();
+        fn = &functions[immediate];
+        saveTop();
+
+        int sp = spStack.back();
+        int params = fn->parameters;
+        int stackEnd = valueStack.size() - params;
+        for (int i = sp; i < stackEnd; i++) {
+          drop(std::make_pair(tagStack[i], valueStack[i]));
+        }
+        for (int i = 0; i < params; i++) {
+          tagStack[sp + i] = tagStack[stackEnd + i];
+          valueStack[sp + i] = valueStack[stackEnd + i];
+        }
+        tagStack.resize(sp + params);
+        valueStack.resize(sp + params);
+        rpStack.back() = immediate;
         pc = 0;
         notop = true;
         break;

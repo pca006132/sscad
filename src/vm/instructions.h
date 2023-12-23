@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 #include <cstdint>
-namespace sscad {
+#include <vector>
 
+#include "ast.h"
+
+namespace sscad {
 constexpr unsigned char NO_IMMEDIATE_START = 0x10;
 // instructions with the I suffix: uses immediate value
-// immediate value: next byte if it is not 0xFF,
+// immediate value: next byte if it is not 0x80,
 // next 4 bytes as int32 otherwise.
 // Next instruction location depends on the next byte,
-// index = current + 2 if next byte is not 0xFF,
+// index = current + 2 if next byte is not 0x80,
 // index = current + 6 otherwise.
 //
 // For instructions without immediate values, it is just index + 1.
@@ -49,6 +52,8 @@ enum class Instruction : unsigned char {
   JumpTrueI,
   // call the function with ID i
   CallI,
+  // call the function with ID i
+  TailCallI,
 
   // unary operation that directly modifies the top of the stack
   // the next char is an enum for the builtin operation
@@ -93,4 +98,9 @@ enum class BuiltinUnary : unsigned char {
   SIGN,
   SQRT
 };
+
+void addInst(std::vector<unsigned char> &instructions, Instruction i);
+void addInst(std::vector<unsigned char> &instructions, Instruction i, int imm);
+void addDouble(std::vector<unsigned char> &instructions, double value);
+void addBinOp(std::vector<unsigned char> &instructions, BinOp op);
 }  // namespace sscad
