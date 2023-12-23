@@ -50,9 +50,8 @@ void addBinOp(std::vector<unsigned char> &instructions, BinOp op) {
 
 int main() {
   std::vector<unsigned char> list1;
-  // this number is stored as the 1-st local...
   addInst(list1, Instruction::ConstNum);
-  addDouble(list1, 100000000000);
+  addDouble(list1, 10000000000);
   addInst(list1, Instruction::ConstNum);
   addDouble(list1, 12.34);
   int looppc = list1.size();
@@ -61,9 +60,8 @@ int main() {
   addInst(list1, Instruction::AddI);
   addImm(list1, 200);
   addInst(list1, Instruction::Dup);
-  // note that the 0-th local is undef...
   addInst(list1, Instruction::GetI);
-  addImm(list1, 1);
+  addImm(list1, 0);
   addBinOp(list1, BinOp::LE);
   int currentIndex = list1.size();
   addInst(list1, Instruction::JumpTrueI);
@@ -73,11 +71,11 @@ int main() {
   addInst(list1, Instruction::Ret);
 
   Evaluator evaluator(&std::cout, {FunctionEntry{list1, 0, false}}, {}, {});
-  auto future = std::async(std::launch::async, [&] {
-    std::this_thread::sleep_for(3s);
-    std::cout << "stopping" << std::endl;
-    evaluator.stop();
-  });
+  // auto future = std::async(std::launch::async, [&] {
+  //   std::this_thread::sleep_for(3s);
+  //   std::cout << "stopping" << std::endl;
+  //   evaluator.stop();
+  // });
   evaluator.eval(0);
   return 0;
 }

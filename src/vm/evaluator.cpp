@@ -112,6 +112,7 @@ ValuePair Evaluator::eval(int id) {
   // note that we do not put the logical top stack element into the stack for
   // better performance.
   ValuePair top = std::make_pair(ValueTag::UNDEF, SValue());
+  bool notop = true;
   int pc = 0;
 
   auto bufferCheck = [&](int offset) {
@@ -125,6 +126,10 @@ ValuePair Evaluator::eval(int id) {
     return result;
   };
   auto saveTop = [&] {
+    if (notop) {
+      notop = false;
+      return;
+    }
     tagStack.push_back(top.first);
     valueStack.push_back(top.second);
   };
@@ -206,6 +211,7 @@ ValuePair Evaluator::eval(int id) {
         spStack.push_back(valueStack.size() - fn->parameters);
         if (fn->isModule) moduleSpStack.push_back(spStack.back());
         pc = 0;
+        notop = true;
         break;
       }
       case Instruction::BuiltinUnaryOp: {
@@ -260,6 +266,8 @@ ValuePair Evaluator::eval(int id) {
         break;
       }
       case Instruction::Ret: {
+        // this is undefined behavior
+        if (notop) invalid();
         rpStack.pop_back();
         int sp = spStack.back();
         spStack.pop_back();
