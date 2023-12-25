@@ -17,7 +17,6 @@
 
 #include <cstring>
 #include <iostream>
-#include <iterator>
 
 #include "ast.h"
 
@@ -145,13 +144,10 @@ ValuePair Evaluator::eval(int id) {
   long counter = 0;
   while (pc < fn->instructions.size() && flag.load(std::memory_order_relaxed)) {
     counter++;
-    // std::cout << "pc: " << pc << std::endl;
-    auto [immediate, offset] = (fn->instructions[pc] >= NO_IMMEDIATE_START)
-                                   ? std::make_pair(0, 0)
-                                   : getImmediate(fn, pc);
     Instruction inst = static_cast<Instruction>(fn->instructions[pc]);
     switch (inst) {
       case Instruction::AddI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         if (top.first == ValueTag::NUMBER)
           top.second.number += immediate;
         else
@@ -161,6 +157,7 @@ ValuePair Evaluator::eval(int id) {
       }
       case Instruction::GetI:
       case Instruction::GetParentI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         saveTop();
         if (inst == Instruction::GetParentI && moduleSpStack.size() == 1)
           invalid();
@@ -174,6 +171,7 @@ ValuePair Evaluator::eval(int id) {
         break;
       }
       case Instruction::SetI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         int index = spStack.back() + immediate;
         if (index < 0 || index >= tagStack.size()) invalid();
         tagStack[index] = top.first;
@@ -183,6 +181,7 @@ ValuePair Evaluator::eval(int id) {
         break;
       }
       case Instruction::GetGlobalI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         saveTop();
         if (immediate < 0 || immediate >= globalTags.size()) invalid();
         top = copy(
@@ -191,6 +190,7 @@ ValuePair Evaluator::eval(int id) {
         break;
       }
       case Instruction::SetGlobalI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         if (immediate < 0 || immediate >= globalTags.size()) invalid();
         globalTags[immediate] = top.first;
         globalValues[immediate] = top.second;
@@ -200,6 +200,7 @@ ValuePair Evaluator::eval(int id) {
       }
       case Instruction::JumpI:
       case Instruction::JumpFalseI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         int target = pc + immediate;
         if (target < 0 || target >= fn->instructions.size()) invalid();
         if (inst == Instruction::JumpFalseI) {
@@ -212,6 +213,7 @@ ValuePair Evaluator::eval(int id) {
         break;
       }
       case Instruction::CallI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         if (immediate >= functions.size()) invalid();
         fn = &functions[immediate];
         saveTop();
@@ -224,6 +226,7 @@ ValuePair Evaluator::eval(int id) {
         break;
       }
       case Instruction::TailCallI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         if (immediate >= functions.size()) invalid();
         fn = &functions[immediate];
         saveTop();
@@ -309,7 +312,7 @@ ValuePair Evaluator::eval(int id) {
         tagStack.resize(sp + 1);
         valueStack.resize(sp + 1);
         if (pcStack.size() == 1) {
-          *ostream << "instructions executed: " << counter << std::endl;
+          // *ostream << "instructions executed: " << counter << std::endl;
           return top;
         }
         fn = &functions[rpStack.back()];

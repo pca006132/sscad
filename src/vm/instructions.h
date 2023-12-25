@@ -19,7 +19,6 @@
 #include "ast.h"
 
 namespace sscad {
-constexpr unsigned char NO_IMMEDIATE_START = 0x10;
 // instructions with the I suffix: uses immediate value
 // immediate value: next byte if it is not 0x80,
 // next 4 bytes as int32 otherwise.
@@ -57,7 +56,7 @@ enum class Instruction : unsigned char {
 
   // unary operation that directly modifies the top of the stack
   // the next char is an enum for the builtin operation
-  BuiltinUnaryOp = NO_IMMEDIATE_START,
+  BuiltinUnaryOp,
   // rhs = stack.pop(), stack.top() = stack.top() OP rhs.
   // the next char is the binary operation.
   BinaryOp,

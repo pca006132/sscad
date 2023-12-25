@@ -16,16 +16,12 @@
 
 #include "vm/evaluator.h"
 
-#include <chrono>
-#include <cstring>
-#include <future>
 #include <iostream>
-#include <thread>
 
 #include "ast.h"
+#include "vm/instructions.h"
 
 using namespace sscad;
-using namespace std::chrono_literals;
 
 int main() {
   /**
@@ -41,17 +37,16 @@ int main() {
    * return d;
    */
   std::vector<unsigned char> list1;
-  addDouble(list1, 10000000000);
-  addDouble(list1, 12.34);
+  addDouble(list1, 10000);
+  addDouble(list1, 0);
   int looppc = list1.size();
-  addInst(list1, Instruction::AddI, 1);
-  addInst(list1, Instruction::AddI, 200);
+  addInst(list1, Instruction::AddI, +1);
+  // addInst(list1, Instruction::AddI, 200);
   addInst(list1, Instruction::Dup);
   addInst(list1, Instruction::GetI, 0);
-  addBinOp(list1, BinOp::GT);
-  int currentIndex = list1.size();
-  addInst(list1, Instruction::JumpFalseI, looppc - currentIndex);
-  addInst(list1, Instruction::Echo);
+  addBinOp(list1, BinOp::GE);
+  addInst(list1, Instruction::JumpFalseI, looppc - list1.size());
+  // addInst(list1, Instruction::Echo);
   addInst(list1, Instruction::Ret);
 
   /**
@@ -61,7 +56,8 @@ int main() {
   constexpr bool useTailcall = true;
   std::vector<unsigned char> foo;
   addInst(foo, Instruction::GetI, 0);
-  addInst(foo, Instruction::Dup, 0);
+  addInst(foo, Instruction::Dup);
+  addDouble(foo, 0);
   addBinOp(foo, BinOp::GT);
   addInst(foo, Instruction::JumpFalseI, useTailcall ? 10 : 11);
   addInst(foo, Instruction::AddI, -1);
@@ -78,7 +74,7 @@ int main() {
   addDouble(entry, 0);
   addInst(entry, Instruction::CallI, 1);
   // uncomment to print stuff
-  // addInst(entry, Instruction::Echo);
+  addInst(entry, Instruction::Echo);
   addInst(entry, Instruction::Ret);
 
   /**
@@ -107,9 +103,8 @@ int main() {
   addInst(pureloop, Instruction::Dup);
   addInst(pureloop, Instruction::GetI, 1);
   addBinOp(pureloop, BinOp::GE);
-  addInst(pureloop, Instruction::JumpFalseI, 4 + (doEcho?1:0));
-  if (doEcho)
-    addInst(pureloop, Instruction::Echo);
+  addInst(pureloop, Instruction::JumpFalseI, 4 + (doEcho ? 1 : 0));
+  if (doEcho) addInst(pureloop, Instruction::Echo);
   addInst(pureloop, Instruction::JumpI, pureloopOuter - pureloop.size());
   addInst(pureloop, Instruction::AddI, 1);
   addInst(pureloop, Instruction::JumpI, pureloopInner - pureloop.size());
@@ -119,14 +114,9 @@ int main() {
       {FunctionEntry{list1, 0, false}, FunctionEntry{foo, 2, false},
        FunctionEntry{entry, 0, false}, FunctionEntry{pureloop, 0, false}},
       {}, {});
-  // auto future = std::async(std::launch::async, [&] {
-  //   std::this_thread::sleep_for(3s);
-  //   std::cout << "stopping" << std::endl;
-  //   evaluator.stop();
-  // });
-  // evaluator.eval(0);
+  for (int i = 0; i < 10000; i++) evaluator.eval(0);
   std::cout << "------------" << std::endl;
+  for (int i = 0; i < 100; i++) evaluator.eval(2);
   evaluator.eval(3);
-  // for (int i = 0; i < 100; i++) evaluator.eval(2);
   return 0;
 }
