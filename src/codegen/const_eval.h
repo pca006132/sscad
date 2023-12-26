@@ -24,6 +24,7 @@
 
 namespace sscad {
 // TODO: handle undef
+// we should also remove unused variables
 class ConstEvaluator : public ExprMap {
  public:
   virtual std::shared_ptr<ExprNode> map(UnaryOpNode& node) override {

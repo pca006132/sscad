@@ -33,8 +33,9 @@ enum class Instruction : unsigned char {
   // copy and push the i-th local to the top of the stack.
   // note that the i-th parameter of the function is also the i-th local.
   GetI,
-  // copy and push the i-th local in the parent scope to the top of the stack.
+  // copy and push the j-th local in the i-th ancestor scope to the top of the stack.
   // used for module children statements
+  // note that the next byte is i, and the next immediate is j
   GetParentI,
   // pop and set the i-th local as the top of the stack.
   SetI,

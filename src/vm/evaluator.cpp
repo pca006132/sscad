@@ -112,7 +112,6 @@ ValuePair Evaluator::eval(int id) {
   std::vector<SValue> valueStack;
   std::vector<int> rpStack({id});
   std::vector<int> spStack({0});
-  std::vector<int> moduleSpStack({0});
   std::vector<int> pcStack({0});
   if (id >= functions.size()) invalid();
   const auto *fn = &functions[id];
@@ -155,19 +154,24 @@ ValuePair Evaluator::eval(int id) {
         pc += offset;
         break;
       }
-      case Instruction::GetI:
-      case Instruction::GetParentI: {
+      case Instruction::GetI: {
         auto [immediate, offset] = getImmediate(fn, pc);
         saveTop();
-        if (inst == Instruction::GetParentI && moduleSpStack.size() == 1)
-          invalid();
-        int index = (inst == Instruction::GetI
-                         ? spStack.back()
-                         : moduleSpStack[moduleSpStack.size() - 2]) +
-                    immediate;
+        int index = spStack.back() + immediate;
         if (index < 0 || index >= tagStack.size()) invalid();
         top = copy(std::make_pair(tagStack[index], valueStack[index]));
         pc += offset;
+        break;
+      }
+      case Instruction::GetParentI: {
+        unsigned char ancestor = fn->instructions[pc + 1];
+        auto [immediate, offset] = getImmediate(fn, pc + 1);
+        saveTop();
+        if (spStack.size() < ancestor * 2) invalid();
+        int index = spStack[spStack.size() - ancestor * 2] + immediate;
+        if (index < 0 || index >= tagStack.size()) invalid();
+        top = copy(std::make_pair(tagStack[index], valueStack[index]));
+        pc += offset + 1;
         break;
       }
       case Instruction::SetI: {
@@ -220,7 +224,6 @@ ValuePair Evaluator::eval(int id) {
         pcStack.push_back(pc + offset);
         rpStack.push_back(immediate);
         spStack.push_back(valueStack.size() - fn->parameters);
-        if (fn->isModule) moduleSpStack.push_back(spStack.back());
         pc = 0;
         notop = true;
         break;
@@ -316,7 +319,6 @@ ValuePair Evaluator::eval(int id) {
           return top;
         }
         fn = &functions[rpStack.back()];
-        if (fn->isModule) moduleSpStack.pop_back();
         pc = pcStack.back();
         pcStack.pop_back();
         break;
