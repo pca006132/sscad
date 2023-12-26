@@ -17,9 +17,9 @@
 #include <iostream>
 #include <sstream>
 
+#include "codegen/const_eval.h"
 #include "frontend.h"
 #include "utils/ast_printer.h"
-#include "codegen/const_eval.h"
 
 using namespace sscad;
 using namespace std::string_literals;
@@ -48,7 +48,10 @@ int main() {
                  "if (1+1==2) { a(foo() ? x : y + 2); } else { b(); }";
         break;
       case 2:
-        (*ss) << "echo(-(1 + 1 == 2 ? 5 : 6));";
+        (*ss) << "a = 1;\n"
+                 "b = 2;\n"
+                 "a = b + 1;\n"
+                 "echo(-(1 + 1 == 2 ? 5 : 6));";
         break;
       case 3:
         (*ss) << "echo(a * b + c * d > 12 && foo ^ bar);\r\n"
@@ -71,7 +74,7 @@ int main() {
     printer.visit(module);
     std::cout << "===================" << std::endl;
     printer.visit(fe.parse(3));
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cout << e.what() << std::endl;
   }
   return 0;

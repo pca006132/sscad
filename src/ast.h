@@ -42,6 +42,7 @@ struct ExprNode : public Node {
   ExprNode(Location loc) : Node(loc) {}
 
   virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) = 0;
+  virtual bool isConstValue() { return false; }
 };
 
 using Expr = std::shared_ptr<ExprNode>;
@@ -55,7 +56,7 @@ struct AssignNode final : public Node {
   std::string ident;
   Expr expr;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct ModuleCall : public Node {
@@ -90,7 +91,7 @@ struct SingleModuleCall : public ModuleCall {
       : body(body), ModuleCall(name, args, loc) {}
 
   ModuleBody body;
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 // if else module, then part is stored in ModuleCall::children
@@ -104,7 +105,7 @@ struct IfModule : public ModuleCall {
   ModuleBody ifthen;
   ModuleBody ifelse;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct ModuleModifier : public ModuleCall {
@@ -115,7 +116,7 @@ struct ModuleModifier : public ModuleCall {
 
   std::string modifier;
   std::shared_ptr<ModuleCall> module;
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct ModuleDecl final : public Node {
@@ -129,7 +130,7 @@ struct ModuleDecl final : public Node {
   std::vector<AssignNode> args;
   ModuleBody body;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct FunctionDecl final : public Node {
@@ -143,7 +144,7 @@ struct FunctionDecl final : public Node {
   std::vector<AssignNode> args;
   Expr body;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct NumberNode final : public ExprNode, std::enable_shared_from_this<NumberNode> {
@@ -152,8 +153,9 @@ struct NumberNode final : public ExprNode, std::enable_shared_from_this<NumberNo
 
   double value;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) override { return mapper.map(*this); }
+  virtual bool isConstValue() override { return true; }
 };
 
 struct StringNode final : public ExprNode, std::enable_shared_from_this<StringNode> {
@@ -162,8 +164,9 @@ struct StringNode final : public ExprNode, std::enable_shared_from_this<StringNo
 
   std::string str;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) override { return mapper.map(*this); }
+  virtual bool isConstValue() override { return true; }
 };
 
 struct UndefNode final : public ExprNode,
@@ -171,8 +174,9 @@ struct UndefNode final : public ExprNode,
  public:
   UndefNode(Location loc) : ExprNode(loc) {}
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) override { return mapper.map(*this); }
+  virtual bool isConstValue() override { return true; }
 };
 
 struct IdentNode : public ExprNode, std::enable_shared_from_this<IdentNode> {
@@ -181,8 +185,8 @@ struct IdentNode : public ExprNode, std::enable_shared_from_this<IdentNode> {
 
   std::string name;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) override { return mapper.map(*this); }
 };
 
 struct UnaryOpNode final : public ExprNode, std::enable_shared_from_this<UnaryOpNode> {
@@ -193,8 +197,8 @@ struct UnaryOpNode final : public ExprNode, std::enable_shared_from_this<UnaryOp
   Expr operand;
   UnaryOp op;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) override { return mapper.map(*this); }
 };
 
 struct BinaryOpNode final : public ExprNode, std::enable_shared_from_this<BinaryOpNode> {
@@ -206,8 +210,8 @@ struct BinaryOpNode final : public ExprNode, std::enable_shared_from_this<Binary
   Expr rhs;
   BinOp op;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) override { return mapper.map(*this); }
 };
 
 struct CallNode final : public ExprNode, std::enable_shared_from_this<CallNode> {
@@ -219,8 +223,8 @@ struct CallNode final : public ExprNode, std::enable_shared_from_this<CallNode> 
   // positional arguments have empty names
   std::vector<AssignNode> args;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) override { return mapper.map(*this); }
 };
 
 struct IfExprNode final : public ExprNode, std::enable_shared_from_this<IfExprNode> {
@@ -232,8 +236,8 @@ struct IfExprNode final : public ExprNode, std::enable_shared_from_this<IfExprNo
   Expr ifthen;
   Expr ifelse;
 
-  virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
+  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) override { return mapper.map(*this); }
 };
 // TODO: list, index, list comprehension, lambda, etc.
 }  // namespace sscad

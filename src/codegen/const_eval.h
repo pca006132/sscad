@@ -15,11 +15,15 @@
  */
 #pragma once
 #include <cmath>
+#include <optional>
+#include <unordered_map>
+#include <vector>
 
 #include "ast.h"
+#include "frontend.h"
 
 namespace sscad {
-// TODO: const evaluation for variables
+// TODO: handle undef
 class ConstEvaluator : public ExprMap {
  public:
   virtual std::shared_ptr<ExprNode> map(UnaryOpNode& node) override {
@@ -109,5 +113,61 @@ class ConstEvaluator : public ExprMap {
     return std::make_shared<IfExprNode>(cond, node.ifthen->map(*this),
                                         node.ifelse->map(*this), node.loc);
   }
+
+  // TODO: store the list of available module, function and variable names, do
+  // static checking.
+  virtual void visit(ModuleBody& body) override {
+    fixAssignments(body.assignments);
+    for (auto& child : body.children) child->visit(*this);
+    variableLookup.pop_back();
+  }
+
+  virtual void visit(TranslationUnit& unit) override {
+    fixAssignments(unit.assignments);
+    for (auto& module : unit.modules) {
+      module.visit(*this);
+    }
+    for (auto& fun : unit.functions) {
+      fun.visit(*this);
+    }
+    for (auto& call : unit.moduleCalls) {
+      call->visit(*this);
+    }
+    variableLookup.pop_back();
+  }
+
+  void fixAssignments(std::vector<AssignNode>& assignments) {
+    // remove duplicates and move assignments to the first occurrence
+    std::unordered_map<std::string, size_t> localIndices;
+    for (size_t i = 0; i < assignments.size(); ++i) {
+      auto& assign = assignments[i];
+      auto iter = localIndices.find(assign.ident);
+      if (iter != localIndices.end()) {
+        // TODO: custom warning type with two locations
+        warnings.push_back(
+            std::make_pair(assign.loc, "duplicated variable declaration"));
+        assignments[iter->second] = assign;
+        assignments.erase(assignments.begin() + i);
+        i -= 1;
+      } else {
+        localIndices.insert(std::make_pair(assign.ident, i));
+      }
+    }
+    variableLookup.push_back({});
+    for (auto& assign : assignments) {
+      assign.visit(*this);
+      // note that we only cache constant values, to avoid inlining making
+      // the code too long
+      variableLookup.back().insert(
+          std::make_pair(assign.ident, assign.expr->isConstValue()
+                                           ? std::make_optional(assign.expr)
+                                           : std::nullopt));
+    }
+  }
+
+ private:
+  std::vector<std::unordered_map<std::string, std::optional<Expr>>>
+      variableLookup;
+  std::vector<std::pair<Location, std::string>> warnings;
 };
 }  // namespace sscad

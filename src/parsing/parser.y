@@ -91,6 +91,8 @@ input   : /* empty */
 statement
         : SEMI
         | LBRACE inner_input RBRACE
+        | assignment
+          { unit.assignments.push_back($1); }
         | module_instantiation
           { auto m = $1;
             if (m != nullptr)
@@ -143,7 +145,7 @@ if_statement
         ;
 
 assignment
-        : ID EQ expr SEMI
+        : ID ASSIGN expr SEMI
           { $$ = AssignNode($1, $3, @$); }
         ;
 
