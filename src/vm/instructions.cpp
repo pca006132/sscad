@@ -43,4 +43,8 @@ void addBinOp(std::vector<unsigned char> &instructions, BinOp op) {
   addInst(instructions, Instruction::BinaryOp);
   instructions.push_back(static_cast<unsigned char>(op));
 }
+void addUnaryOp(std::vector<unsigned char> &instructions, BuiltinUnary op) {
+  addInst(instructions, Instruction::BuiltinUnaryOp);
+  instructions.push_back(static_cast<unsigned char>(op));
+}
 }  // namespace sscad
