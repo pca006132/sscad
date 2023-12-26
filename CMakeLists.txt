@@ -50,6 +50,7 @@ add_library(sscad
     src/parsing/scanner_helper.cpp
     src/vm/evaluator.cpp
     src/vm/instructions.cpp
+    src/utils/ast_printer.cpp
     ${BISON_Parser_OUTPUTS} ${FLEX_Scanner_OUTPUTS})
 target_include_directories(sscad PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(sscad PUBLIC src)

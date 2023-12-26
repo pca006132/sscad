@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #pragma once
-#include <ostream>
+#include <memory>
 
 namespace sscad {
 struct AssignNode;
@@ -24,6 +24,7 @@ struct IfModule;
 struct ModuleModifier;
 struct ModuleDecl;
 struct FunctionDecl;
+struct ExprNode;
 struct NumberNode;
 struct StringNode;
 struct UndefNode;
@@ -51,31 +52,19 @@ class AstVisitor {
   virtual void visit(BinaryOpNode &);
   virtual void visit(CallNode &);
   virtual void visit(IfExprNode &);
+  virtual void visit(TranslationUnit &unit);
 };
 
-class AstPrinter : public AstVisitor {
+class ExprMap : public AstVisitor {
  public:
- public:
-  AstPrinter(std::ostream *ostream) : ostream(ostream) {}
   virtual void visit(AssignNode &) override;
-  virtual void visit(ModuleBody &) override;
-  virtual void visit(SingleModuleCall &) override;
-  virtual void visit(IfModule &) override;
-  virtual void visit(ModuleModifier &) override;
-  virtual void visit(ModuleDecl &) override;
-  virtual void visit(FunctionDecl &) override;
-  virtual void visit(NumberNode &) override;
-  virtual void visit(StringNode &) override;
-  virtual void visit(UndefNode &) override;
-  virtual void visit(IdentNode &) override;
-  virtual void visit(UnaryOpNode &) override;
-  virtual void visit(BinaryOpNode &) override;
-  virtual void visit(CallNode &) override;
-  virtual void visit(IfExprNode &) override;
-  void visit(TranslationUnit &unit);
-
- private:
-  std::ostream *ostream;
+  virtual std::shared_ptr<ExprNode> map(NumberNode &);
+  virtual std::shared_ptr<ExprNode> map(StringNode &);
+  virtual std::shared_ptr<ExprNode> map(UndefNode &);
+  virtual std::shared_ptr<ExprNode> map(IdentNode &);
+  virtual std::shared_ptr<ExprNode> map(UnaryOpNode &);
+  virtual std::shared_ptr<ExprNode> map(BinaryOpNode &);
+  virtual std::shared_ptr<ExprNode> map(CallNode &);
+  virtual std::shared_ptr<ExprNode> map(IfExprNode &);
 };
-
 }  // namespace sscad

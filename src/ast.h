@@ -27,65 +27,6 @@ enum class BinOp : unsigned char {
   LT, LE, GT, GE, EQ, NEQ, AND, OR };
 // clang-format one
 
-inline std::ostream &operator<<(std::ostream &os, UnaryOp op) {
-  switch (op) {
-    case UnaryOp::NEG:
-      os << "-";
-      break;
-    case UnaryOp::NOT:
-      os << "!";
-      break;
-  }
-  return os;
-}
-
-inline std::ostream &operator<<(std::ostream &os, BinOp op) {
-  switch (op) {
-    case BinOp::ADD:
-      os << "+";
-      break;
-    case BinOp::SUB:
-      os << "-";
-      break;
-    case BinOp::MUL:
-      os << "*";
-      break;
-    case BinOp::DIV:
-      os << "/";
-      break;
-    case BinOp::MOD:
-      os << "%";
-      break;
-    case BinOp::EXP:
-      os << "^";
-      break;
-    case BinOp::LT:
-      os << "<";
-      break;
-    case BinOp::LE:
-      os << "<=";
-      break;
-    case BinOp::GT:
-      os << ">";
-      break;
-    case BinOp::GE:
-      os << ">=";
-      break;
-    case BinOp::EQ:
-      os << "=";
-      break;
-    case BinOp::NEQ:
-      os << "!=";
-      break;
-    case BinOp::AND:
-      os << "&&";
-      break;
-    case BinOp::OR:
-      os << "||";
-      break;
-  }
-  return os;
-}
 
 struct Node {
  public:
@@ -99,6 +40,8 @@ struct Node {
 struct ExprNode : public Node {
  public:
   ExprNode(Location loc) : Node(loc) {}
+
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) = 0;
 };
 
 using Expr = std::shared_ptr<ExprNode>;
@@ -203,41 +146,46 @@ struct FunctionDecl final : public Node {
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
-struct NumberNode final : public ExprNode {
+struct NumberNode final : public ExprNode, std::enable_shared_from_this<NumberNode> {
  public:
   NumberNode(double value, Location loc) : value(value), ExprNode(loc) {}
 
   double value;
 
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
 };
 
-struct StringNode final : public ExprNode {
+struct StringNode final : public ExprNode, std::enable_shared_from_this<StringNode> {
  public:
   StringNode(std::string str, Location loc) : str(str), ExprNode(loc) {}
 
   std::string str;
 
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
 };
 
-struct UndefNode final : public ExprNode {
+struct UndefNode final : public ExprNode,
+  public std::enable_shared_from_this<UndefNode> {
  public:
   UndefNode(Location loc) : ExprNode(loc) {}
 
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
 };
 
-struct IdentNode : public ExprNode {
+struct IdentNode : public ExprNode, std::enable_shared_from_this<IdentNode> {
  public:
   IdentNode(std::string name, Location loc) : name(name), ExprNode(loc) {}
 
   std::string name;
 
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
 };
 
-struct UnaryOpNode final : public ExprNode {
+struct UnaryOpNode final : public ExprNode, std::enable_shared_from_this<UnaryOpNode> {
  public:
   UnaryOpNode(Expr operand, UnaryOp op, Location loc)
       : operand(operand), op(op), ExprNode(loc) {}
@@ -246,9 +194,10 @@ struct UnaryOpNode final : public ExprNode {
   UnaryOp op;
 
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
 };
 
-struct BinaryOpNode final : public ExprNode {
+struct BinaryOpNode final : public ExprNode, std::enable_shared_from_this<BinaryOpNode> {
  public:
   BinaryOpNode(Expr lhs, Expr rhs, BinOp op, Location loc)
       : lhs(lhs), rhs(rhs), op(op), ExprNode(loc) {}
@@ -258,9 +207,10 @@ struct BinaryOpNode final : public ExprNode {
   BinOp op;
 
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
 };
 
-struct CallNode final : public ExprNode {
+struct CallNode final : public ExprNode, std::enable_shared_from_this<CallNode> {
  public:
   CallNode(Expr fun, std::vector<AssignNode> args, Location loc)
       : fun(fun), args(args), ExprNode(loc) {}
@@ -270,9 +220,10 @@ struct CallNode final : public ExprNode {
   std::vector<AssignNode> args;
 
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
 };
 
-struct IfExprNode final : public ExprNode {
+struct IfExprNode final : public ExprNode, std::enable_shared_from_this<IfExprNode> {
  public:
   IfExprNode(Expr cond, Expr ifthen, Expr ifelse, Location loc)
       : cond(cond), ifthen(ifthen), ifelse(ifelse), ExprNode(loc) {}
@@ -282,6 +233,7 @@ struct IfExprNode final : public ExprNode {
   Expr ifelse;
 
   virtual void visit(AstVisitor &visitor) { visitor.visit(*this); }
+  virtual std::shared_ptr<ExprNode> map(ExprMap& mapper) { return mapper.map(*this); }
 };
 // TODO: list, index, list comprehension, lambda, etc.
 }  // namespace sscad
