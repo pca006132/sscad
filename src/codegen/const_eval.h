@@ -42,7 +42,7 @@ class ConstEvaluator : public ExprMap {
 
   virtual std::shared_ptr<ExprNode> map(BinaryOpNode& node) override {
     const auto lhs = node.lhs->map(*this);
-    const auto rhs = node.lhs->map(*this);
+    const auto rhs = node.rhs->map(*this);
     auto lhsNum = dynamic_cast<NumberNode*>(lhs.get());
     auto rhsNum = dynamic_cast<NumberNode*>(rhs.get());
     if (lhsNum != nullptr && rhsNum != nullptr) {

@@ -18,6 +18,7 @@
 #include <sstream>
 
 #include "codegen/const_eval.h"
+#include "codegen/bytecode_gen.h"
 #include "frontend.h"
 #include "utils/ast_printer.h"
 
@@ -51,6 +52,7 @@ int main() {
         (*ss) << "a = 1;\n"
                  "b = 2;\n"
                  "a = b + 1;\n"
+                 "function foo(a, b) = a > 0 ? foo(a-1, b+2) : b;\n"
                  "echo(-(1 + 1 == 2 ? 5 : 6));";
         break;
       case 3:
@@ -63,6 +65,7 @@ int main() {
 
   Frontend fe(resolver, provider);
   ConstEvaluator const_eval;
+  BytecodeGen generator;
   AstVisitor* const_eval_ptr = &const_eval;
   try {
     printer.visit(fe.parse(0));
@@ -71,6 +74,7 @@ int main() {
     std::cout << "===================" << std::endl;
     auto module = fe.parse(2);
     const_eval_ptr->visit(module);
+    generator.visit(module);
     printer.visit(module);
     std::cout << "===================" << std::endl;
     printer.visit(fe.parse(3));

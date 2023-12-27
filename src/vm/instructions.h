@@ -94,6 +94,7 @@ void addDouble(std::vector<unsigned char> &instructions, double value);
 void addBinOp(std::vector<unsigned char> &instructions, BinOp op);
 void addUnaryOp(std::vector<unsigned char> &instructions, BuiltinUnary op);
 
-void print(std::ostream &ostream, std::vector<unsigned char> &instructions, bool labels = true);
+void print(std::ostream &ostream,
+           const std::vector<unsigned char> &instructions, bool labels = true);
 std::string getInstName(Instruction inst);
 }  // namespace sscad

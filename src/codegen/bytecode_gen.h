@@ -17,10 +17,13 @@
 #include <cassert>
 #include <limits>
 #include <optional>
-#include <unordered_map>
+// #include <unordered_map>
+#include <iostream>
+#include <map>
 #include <vector>
 
 #include "ast.h"
+#include "frontend.h"
 #include "vm/instructions.h"
 
 namespace sscad {
@@ -38,6 +41,8 @@ const std::unordered_map<std::string, BuiltinUnary> builtins = {
 // simple direct translation...
 class BytecodeGen : public AstVisitor {
  public:
+  BytecodeGen() {}
+
   virtual void visit(NumberNode& node) override {
     addDouble(tail->instructions, node.value);
   }
@@ -133,27 +138,62 @@ class BytecodeGen : public AstVisitor {
     node.cond->visit(*this);
     int currentid = currentbb;
 
-    bb.emplace_back();
-    int falseid = bb.size() - 1;
-    currentbb = falseid;
-    tail = &bb[falseid];
-    node.ifelse->visit(*this);
-
-    bb.emplace_back();
-    int trueid = bb.size() - 1;
+    funbody.emplace_back();
+    int trueid = funbody.size() - 1;
     currentbb = trueid;
-    tail = &bb[trueid];
+    tail = &funbody[trueid];
     node.ifthen->visit(*this);
 
-    bb.emplace_back();
-    int tailid = bb.size() - 1;
-    currentbb = tailid;
-    tail = &bb[tailid];
+    funbody.emplace_back();
+    int falseid = funbody.size() - 1;
+    currentbb = falseid;
+    tail = &funbody[falseid];
+    node.ifelse->visit(*this);
 
-    bb[trueid].next = tailid;
-    bb[falseid].next = tailid;
-    bb[currentid].jumpFalse = falseid;
-    bb[currentid].next = trueid;
+    funbody.emplace_back();
+    int tailid = funbody.size() - 1;
+    currentbb = tailid;
+    tail = &funbody[tailid];
+
+    funbody[trueid].next = tailid;
+    funbody[falseid].next = tailid;
+    funbody[currentid].jumpFalse = falseid;
+    funbody[currentid].next = trueid;
+  }
+
+  virtual void visit(TranslationUnit& unit) override {
+    for (auto& fun : unit.functions) {
+      functionMap.insert(std::make_pair(std::make_pair(currentFile, fun.name),
+                                        functionMap.size()));
+    }
+    for (auto& assign : unit.assignments) {
+      globalMap.insert(std::make_pair(std::make_pair(currentFile, assign.ident),
+                                      globalMap.size()));
+    }
+    // actual translation
+    for (auto& fun : unit.functions) {
+      std::cout << "codegen for function " << fun.name << std::endl;
+      funbody.clear();
+      tail = &funbody.emplace_back();
+      currentbb = 0;
+      variableLookup.clear();
+      auto& args = variableLookup.emplace_back();
+      for (auto& assign : fun.args)
+        args.insert(std::make_pair(assign.ident, args.size()));
+      fun.body->visit(*this);
+      tail->next = -1;
+      int i = 0;
+      for (const auto& bb : funbody) {
+        std::cout << "l" << i++ << std::endl;
+        print(std::cout, bb.instructions);
+        if (bb.jumpFalse)
+          std::cout << "  JumpFalseI l" << bb.jumpFalse.value() << std::endl;
+        if (bb.next == -1)
+          std::cout << "  ret" << std::endl;
+        else
+          std::cout << "  JumpI l" << bb.next << std::endl;
+      }
+    }
   }
 
  private:
@@ -163,10 +203,10 @@ class BytecodeGen : public AstVisitor {
     int next;
   };
   std::vector<std::unordered_map<std::string, int>> variableLookup;
-  std::unordered_map<std::pair<FileHandle, std::string>, int> functionMap;
-  std::unordered_map<std::pair<FileHandle, std::string>, int> globalMap;
+  std::map<std::pair<FileHandle, std::string>, int> functionMap;
+  std::map<std::pair<FileHandle, std::string>, int> globalMap;
   std::vector<std::pair<Location, std::string>> warnings;
-  std::vector<BasicBlock> bb;
+  std::vector<BasicBlock> funbody;
   BasicBlock* tail;
   unsigned int currentbb;
   FileHandle currentFile;

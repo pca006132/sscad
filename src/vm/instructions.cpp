@@ -165,8 +165,8 @@ std::ostream &operator<<(std::ostream &ostream, BuiltinUnary unary) {
   return ostream;
 }
 
-void print(std::ostream &ostream, std::vector<unsigned char> &instructions,
-           bool labels) {
+void print(std::ostream &ostream,
+           const std::vector<unsigned char> &instructions, bool labels) {
   std::set<int> labelIndices;
   int pc = 0;
   if (labels) {
