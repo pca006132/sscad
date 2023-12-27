@@ -41,7 +41,7 @@ class AstPrinter : public AstVisitor {
   std::ostream *ostream;
 };
 
-inline std::ostream &operator<<(std::ostream &os, UnaryOp op);
-inline std::ostream &operator<<(std::ostream &os, BinOp op);
+std::ostream &operator<<(std::ostream &os, UnaryOp op);
+std::ostream &operator<<(std::ostream &os, BinOp op);
 
 }  // namespace sscad

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #pragma once
+#include <ostream>
 #include <vector>
 
 #include "ast.h"
@@ -92,4 +93,7 @@ void addInst(std::vector<unsigned char> &instructions, Instruction i, int imm);
 void addDouble(std::vector<unsigned char> &instructions, double value);
 void addBinOp(std::vector<unsigned char> &instructions, BinOp op);
 void addUnaryOp(std::vector<unsigned char> &instructions, BuiltinUnary op);
+
+void print(std::ostream &ostream, std::vector<unsigned char> &instructions, bool labels = true);
+std::string getInstName(Instruction inst);
 }  // namespace sscad

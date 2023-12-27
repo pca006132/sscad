@@ -74,7 +74,7 @@ int main() {
   addDouble(entry, 0);
   addInst(entry, Instruction::CallI, 1);
   // uncomment to print stuff
-  addInst(entry, Instruction::Echo);
+  // addInst(entry, Instruction::Echo);
   addInst(entry, Instruction::Ret);
 
   /**
@@ -108,6 +108,8 @@ int main() {
   addInst(pureloop, Instruction::JumpI, pureloopOuter - pureloop.size());
   addInst(pureloop, Instruction::AddI, 1);
   addInst(pureloop, Instruction::JumpI, pureloopInner - pureloop.size());
+
+  print(std::cout, pureloop);
 
   Evaluator evaluator(
       &std::cout,
