@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "ast.h"
 #include "ast_visitor.h"
 namespace sscad {
 class AstPrinter : public AstVisitor {
- public:
  public:
   AstPrinter(std::ostream *ostream) : ostream(ostream) {}
   virtual void visit(AssignNode &) override;
@@ -36,6 +34,11 @@ class AstPrinter : public AstVisitor {
   virtual void visit(CallNode &) override;
   virtual void visit(IfExprNode &) override;
   virtual void visit(TranslationUnit &unit) override;
+
+  // TODO: add new AST nodes
+
+  // https://isocpp.org/wiki/faq/strange-inheritance#hiding-rule
+  using AstVisitor::visit;
 
  private:
   std::ostream *ostream;

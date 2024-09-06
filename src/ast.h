@@ -16,7 +16,6 @@
 #pragma once
 #include <vector>
 
-#include "ast_visitor.h"
 #include "location.h"
 namespace sscad {
 
@@ -32,15 +31,13 @@ struct Node {
   Node(Location loc) : loc(loc) {}
 
   Location loc;
-
-  virtual void visit(AstVisitor &) = 0;
+  virtual void dummy() {}
 };
 
 struct ExprNode : public Node {
  public:
   ExprNode(Location loc) : Node(loc) {}
 
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) = 0;
   virtual bool isConstValue() { return false; }
 };
 
@@ -54,8 +51,6 @@ struct AssignNode final : public Node {
 
   std::string ident;
   Expr expr;
-
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct ModuleCall : public Node {
@@ -79,10 +74,9 @@ struct ModuleBody {
   std::vector<AssignNode> assignments;
   // list of module calls, note that this includes echo and assert
   std::vector<std::shared_ptr<ModuleCall>> children;
-
-  void visit(AstVisitor &visitor) { visitor.visit(*this); }
 };
 
+// for and intersection_for are represented as builtin SingleModuleCall
 struct SingleModuleCall : public ModuleCall {
  public:
   SingleModuleCall(const std::string name, std::vector<AssignNode> args,
@@ -90,7 +84,6 @@ struct SingleModuleCall : public ModuleCall {
       : body(body), ModuleCall(name, args, loc) {}
 
   ModuleBody body;
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 // if else module, then part is stored in ModuleCall::children
@@ -103,8 +96,6 @@ struct IfModule : public ModuleCall {
 
   ModuleBody ifthen;
   ModuleBody ifelse;
-
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct ModuleModifier : public ModuleCall {
@@ -115,7 +106,6 @@ struct ModuleModifier : public ModuleCall {
 
   std::string modifier;
   std::shared_ptr<ModuleCall> module;
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct ModuleDecl final : public Node {
@@ -128,8 +118,6 @@ struct ModuleDecl final : public Node {
   // arguments with no default value have expr=nullptr
   std::vector<AssignNode> args;
   ModuleBody body;
-
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct FunctionDecl final : public Node {
@@ -142,8 +130,6 @@ struct FunctionDecl final : public Node {
   // arguments with no default value have expr=nullptr
   std::vector<AssignNode> args;
   Expr body;
-
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
 };
 
 struct NumberNode final : public ExprNode,
@@ -153,10 +139,6 @@ struct NumberNode final : public ExprNode,
 
   double value;
 
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) override {
-    return mapper.map(*this);
-  }
   virtual bool isConstValue() override { return true; }
 };
 
@@ -167,10 +149,6 @@ struct StringNode final : public ExprNode,
 
   std::string str;
 
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) override {
-    return mapper.map(*this);
-  }
   virtual bool isConstValue() override { return true; }
 };
 
@@ -179,10 +157,6 @@ struct UndefNode final : public ExprNode,
  public:
   UndefNode(Location loc) : ExprNode(loc) {}
 
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) override {
-    return mapper.map(*this);
-  }
   virtual bool isConstValue() override { return true; }
 };
 
@@ -192,10 +166,6 @@ struct IdentNode : public ExprNode, std::enable_shared_from_this<IdentNode> {
 
   std::string name;
 
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) override {
-    return mapper.map(*this);
-  }
   bool isConfigVar() const { return name.length() > 1 && name[0] == '$'; }
 };
 
@@ -207,11 +177,6 @@ struct UnaryOpNode final : public ExprNode,
 
   Expr operand;
   UnaryOp op;
-
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) override {
-    return mapper.map(*this);
-  }
 };
 
 struct BinaryOpNode final : public ExprNode,
@@ -223,11 +188,6 @@ struct BinaryOpNode final : public ExprNode,
   Expr lhs;
   Expr rhs;
   BinOp op;
-
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) override {
-    return mapper.map(*this);
-  }
 };
 
 struct CallNode final : public ExprNode,
@@ -239,11 +199,6 @@ struct CallNode final : public ExprNode,
   Expr fun;
   // positional arguments have empty names
   std::vector<AssignNode> args;
-
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) override {
-    return mapper.map(*this);
-  }
 };
 
 struct IfExprNode final : public ExprNode,
@@ -255,11 +210,87 @@ struct IfExprNode final : public ExprNode,
   Expr cond;
   Expr ifthen;
   Expr ifelse;
-
-  virtual void visit(AstVisitor &visitor) override { visitor.visit(*this); }
-  virtual std::shared_ptr<ExprNode> map(ExprMap &mapper) override {
-    return mapper.map(*this);
-  }
 };
-// TODO: list, index, list comprehension, lambda, etc.
+
+struct ListExprNode final : public ExprNode,
+                            std::enable_shared_from_this<ListExprNode> {
+ public:
+  ListExprNode(std::vector<std::pair<Expr, bool>> elements, Location loc)
+      : elements(elements), ExprNode(loc) {}
+
+  // element, is_each pair
+  // if is_each is true, the element should be flattened
+  std::vector<std::pair<Expr, bool>> elements;
+};
+
+struct RangeNode final : public ExprNode,
+                         std::enable_shared_from_this<RangeNode> {
+ public:
+  RangeNode(Expr start, Expr step, Expr end, Location loc)
+      : start(start), step(step), end(end), ExprNode(loc) {}
+
+  Expr start, step, end;
+};
+
+// TODO: multiple generator expression is encoded as nested comprehension with
+// is_each set to true
+struct ListCompNode final : public ExprNode,
+                            std::enable_shared_from_this<ListCompNode> {
+ public:
+  ListCompNode(std::vector<AssignNode> assignments,
+               std::vector<std::tuple<Expr, Expr, bool>> generators,
+               Location loc)
+      : assignments(assignments), generators(generators), ExprNode(loc) {}
+
+  // iterator variables
+  std::vector<AssignNode> assignments;
+  // condition, element, is_each triple
+  std::vector<std::tuple<Expr, Expr, bool>> generators;
+};
+
+struct ListCompCNode final : public ExprNode,
+                             std::enable_shared_from_this<ListCompCNode> {
+ public:
+  ListCompCNode(std::vector<AssignNode> init, Expr cond,
+                std::vector<AssignNode> update,
+                std::vector<std::tuple<Expr, Expr, bool>> generators,
+                Location loc)
+      : init(init),
+        cond(cond),
+        update(update),
+        generators(generators),
+        ExprNode(loc) {}
+  std::vector<AssignNode> init;
+  Expr cond;
+  std::vector<AssignNode> update;
+  // condition, element, is_each triple
+  std::vector<std::tuple<Expr, Expr, bool>> generators;
+};
+
+struct ListIndexNode final : public ExprNode,
+                             std::enable_shared_from_this<ListIndexNode> {
+ public:
+  ListIndexNode(Expr list, Expr index, Location loc)
+      : list(list), index(index), ExprNode(loc) {}
+  Expr list;
+  Expr index;
+};
+
+struct LetNode final : public ExprNode, std::enable_shared_from_this<LetNode> {
+ public:
+  LetNode(std::vector<AssignNode> bindings, Expr expr, Location loc)
+      : bindings(bindings), expr(expr), ExprNode(loc) {}
+  std::vector<AssignNode> bindings;
+  Expr expr;
+};
+
+// closure is handled by the bytecode generator
+struct LambdaNode final : public ExprNode,
+                          std::enable_shared_from_this<LambdaNode> {
+ public:
+  LambdaNode(std::vector<AssignNode> params, Expr expr, Location loc)
+      : params(params), expr(expr), ExprNode(loc) {}
+  std::vector<AssignNode> params;
+  Expr expr;
+};
 }  // namespace sscad

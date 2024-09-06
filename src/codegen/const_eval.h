@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "ast.h"
+#include "ast_visitor.h"
 #include "frontend.h"
 
 namespace sscad {
@@ -27,8 +27,10 @@ namespace sscad {
 // we should also remove unused variables
 class ConstEvaluator : public ExprMap {
  public:
+  using ExprMap::map;
+  using ExprMap::visit;
   virtual std::shared_ptr<ExprNode> map(UnaryOpNode& node) override {
-    const auto operand = node.operand->map(*this);
+    const auto operand = map(node.operand);
     auto number = dynamic_cast<NumberNode*>(operand.get());
     if (number != nullptr) {
       if (node.op == UnaryOp::NEG)
@@ -41,8 +43,8 @@ class ConstEvaluator : public ExprMap {
   }
 
   virtual std::shared_ptr<ExprNode> map(BinaryOpNode& node) override {
-    const auto lhs = node.lhs->map(*this);
-    const auto rhs = node.rhs->map(*this);
+    const auto lhs = map(node.lhs);
+    const auto rhs = map(node.rhs);
     auto lhsNum = dynamic_cast<NumberNode*>(lhs.get());
     auto rhsNum = dynamic_cast<NumberNode*>(rhs.get());
     if (lhsNum != nullptr && rhsNum != nullptr) {
@@ -105,34 +107,34 @@ class ConstEvaluator : public ExprMap {
   }
 
   virtual std::shared_ptr<ExprNode> map(IfExprNode& node) override {
-    const auto cond = node.cond->map(*this);
+    const auto cond = map(node.cond);
     auto number = dynamic_cast<NumberNode*>(cond.get());
     if (number != nullptr) {
-      if (fabs(number->value) == 0.0) return node.ifelse->map(*this);
-      return node.ifthen->map(*this);
+      if (fabs(number->value) == 0.0) return map(node.ifelse);
+      return map(node.ifthen);
     }
-    return std::make_shared<IfExprNode>(cond, node.ifthen->map(*this),
-                                        node.ifelse->map(*this), node.loc);
+    return std::make_shared<IfExprNode>(cond, map(node.ifthen),
+                                        map(node.ifelse), node.loc);
   }
 
   // TODO: store the list of available module, function and variable names, do
   // static checking.
   virtual void visit(ModuleBody& body) override {
     fixAssignments(body.assignments);
-    for (auto& child : body.children) child->visit(*this);
+    for (auto& child : body.children) visit(child);
     variableLookup.pop_back();
   }
 
   virtual void visit(TranslationUnit& unit) override {
     fixAssignments(unit.assignments);
     for (auto& module : unit.modules) {
-      module.visit(*this);
+      visit(module);
     }
     for (auto& fun : unit.functions) {
-      fun.visit(*this);
+      visit(fun);
     }
     for (auto& call : unit.moduleCalls) {
-      call->visit(*this);
+      visit(call);
     }
     variableLookup.pop_back();
   }
@@ -156,7 +158,7 @@ class ConstEvaluator : public ExprMap {
     }
     variableLookup.push_back({});
     for (auto& assign : assignments) {
-      assign.visit(*this);
+      visit(assign);
       // note that we only cache constant values, to avoid inlining making
       // the code too long
       variableLookup.back().insert(

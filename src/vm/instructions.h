@@ -29,21 +29,13 @@ namespace sscad {
 //
 // For instructions without immediate values, it is just index + 1.
 enum class Instruction : unsigned char {
-  // add an constant constant to the top of the stack.
-  AddI = 0,
   // copy and push the i-th local to the top of the stack.
   // note that the i-th parameter of the function is also the i-th local.
   GetI,
-  // copy and push the j-th local in the i-th ancestor scope to the top of the
-  // stack. used for module children statements
-  // note that the next byte is i, and the next immediate is j
-  GetParentI,
   // pop and set the i-th local as the top of the stack.
   SetI,
-  // copy and push the i-th global to the top of the stack.
-  GetGlobalI,
-  // pop and set the i-th global as the top of the stack.
-  SetGlobalI,
+  // add an constant constant to the top of the stack.
+  AddI,
   // jump n bytes relative to the current instruction
   // e.g. if the current instruction is at index 0 and the immediate is 4,
   // the next instruction to be executed is at index 4.
@@ -51,11 +43,10 @@ enum class Instruction : unsigned char {
   // pop the top of the stack, jump n bytes relative current instruction if it
   // is false, and go to the next instruction normally otherwise.
   JumpFalseI,
-  // call the function with ID i
-  CallI,
-  // call the function with ID i
-  TailCallI,
-
+  // pop and discard the value in the top of the stack
+  Pop,
+  // duplicate and push the value in the top of the stack
+  Dup,
   // unary operation that directly modifies the top of the stack
   // the next char is an enum for the builtin operation
   BuiltinUnaryOp,
@@ -70,10 +61,18 @@ enum class Instruction : unsigned char {
   // true if the next byte is 1, and false if the next byte is 0.
   // next instruction index: current + 2
   ConstMisc,
-  // pop and discard the value in the top of the stack
-  Pop,
-  // duplicate and push the value in the top of the stack
-  Dup,
+  // copy and push the j-th local in the i-th ancestor scope to the top of the
+  // stack. used for module children statements
+  // note that the next byte is i, and the next immediate is j
+  GetParentI,
+  // copy and push the i-th global to the top of the stack.
+  GetGlobalI,
+  // pop and set the i-th global as the top of the stack.
+  SetGlobalI,
+  // call the function with ID i
+  CallI,
+  // call the function with ID i
+  TailCallI,
   // return the top value of the stack
   Ret,
   // just for debugging for now

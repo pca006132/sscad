@@ -16,29 +16,20 @@
 #pragma once
 #include <memory>
 
-namespace sscad {
-struct AssignNode;
-struct ModuleBody;
-struct SingleModuleCall;
-struct IfModule;
-struct ModuleModifier;
-struct ModuleDecl;
-struct FunctionDecl;
-struct ExprNode;
-struct NumberNode;
-struct StringNode;
-struct UndefNode;
-struct IdentNode;
-struct UnaryOpNode;
-struct BinaryOpNode;
-struct CallNode;
-struct IfExprNode;
-struct TranslationUnit;
+#include "ast.h"
+#include "frontend.h"
 
+namespace sscad {
 class AstVisitor {
  public:
+  void visit(Node &);
+
+  template <typename T, typename = std::enable_if_t<std::is_base_of_v<Node, T>>>
+  void visit(std::shared_ptr<T> n) {
+    visit(*n);
+  }
+
   virtual void visit(AssignNode &);
-  virtual void visit(ModuleBody &);
   virtual void visit(SingleModuleCall &);
   virtual void visit(IfModule &);
   virtual void visit(ModuleModifier &);
@@ -52,11 +43,26 @@ class AstVisitor {
   virtual void visit(BinaryOpNode &);
   virtual void visit(CallNode &);
   virtual void visit(IfExprNode &);
-  virtual void visit(TranslationUnit &unit);
+  virtual void visit(ListExprNode &);
+  virtual void visit(RangeNode&);
+  virtual void visit(ListCompNode&);
+  virtual void visit(ListCompCNode&);
+  virtual void visit(ListIndexNode&);
+  virtual void visit(LetNode&);
+  virtual void visit(LambdaNode&);
+  virtual void visit(ModuleBody &);
+  virtual void visit(TranslationUnit &);
 };
 
 class ExprMap : public AstVisitor {
  public:
+  using AstVisitor::visit;
+  std::shared_ptr<ExprNode> map(ExprNode &);
+  template <typename T,
+            typename = std::enable_if_t<std::is_base_of_v<ExprNode, T>>>
+  std::shared_ptr<ExprNode> map(std::shared_ptr<T> n) {
+    return map(*n);
+  }
   virtual void visit(AssignNode &) override;
   virtual std::shared_ptr<ExprNode> map(NumberNode &);
   virtual std::shared_ptr<ExprNode> map(StringNode &);
@@ -66,5 +72,12 @@ class ExprMap : public AstVisitor {
   virtual std::shared_ptr<ExprNode> map(BinaryOpNode &);
   virtual std::shared_ptr<ExprNode> map(CallNode &);
   virtual std::shared_ptr<ExprNode> map(IfExprNode &);
+  virtual std::shared_ptr<ExprNode> map(ListExprNode &);
+  virtual std::shared_ptr<ExprNode> map(RangeNode&);
+  virtual std::shared_ptr<ExprNode> map(ListCompNode&);
+  virtual std::shared_ptr<ExprNode> map(ListCompCNode&);
+  virtual std::shared_ptr<ExprNode> map(ListIndexNode&);
+  virtual std::shared_ptr<ExprNode> map(LetNode&);
+  virtual std::shared_ptr<ExprNode> map(LambdaNode&);
 };
 }  // namespace sscad

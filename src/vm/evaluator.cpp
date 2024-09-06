@@ -33,27 +33,29 @@ constexpr char toHex(char n) {
 #if defined(__GNUC__)
 #define LIKELY(cond) __builtin_expect((cond), 1)
 #define UNLIKELY(cond) __builtin_expect((cond), 0)
-#define HOT __attribute__((hot))
+#define ALWAYS_INLINE __attribute__((always_inline))
+#define COLD __attribute__((cold))
 #else
 #define LIKELY(cond) (cond)
 #define UNLIKELY(cond) (cond)
-#define HOT
+#define ALWAYS_INLINE
+#define COLD
 #endif
 
-void invalid() { throw std::runtime_error("invalid bytecode"); }
+COLD void invalid() { throw std::runtime_error("invalid bytecode"); }
 
-inline ValuePair copy(ValuePair v) {
+ALWAYS_INLINE ValuePair copy(ValuePair v) {
   if (isAllocated(v.first)) unimplemented();
   return v;
 }
 
-inline void drop(ValuePair v) {
+ALWAYS_INLINE void drop(ValuePair v) {
   if (isAllocated(v.first)) unimplemented();
 }
 
 // return actual value and the pc increment for next function
-HOT std::pair<int, int> getImmediate(const FunctionEntry *entry,
-                                     int currentPC) {
+ALWAYS_INLINE std::pair<int, int> getImmediate(const FunctionEntry *entry,
+                                               int currentPC) {
   if (UNLIKELY(currentPC + 1 >= entry->instructions.size())) invalid();
   if (LIKELY(entry->instructions[currentPC + 1] != 0x80)) {
     const char *p = reinterpret_cast<const char *>(entry->instructions.data() +
@@ -66,7 +68,7 @@ HOT std::pair<int, int> getImmediate(const FunctionEntry *entry,
   return std::make_pair(p, 6);
 }
 
-ValuePair handleUnary(ValuePair v, BuiltinUnary op) {
+ALWAYS_INLINE ValuePair handleUnary(ValuePair v, BuiltinUnary op) {
   switch (op) {
     case BuiltinUnary::NOT:
       // TODO: boolean cast
@@ -82,7 +84,7 @@ ValuePair handleUnary(ValuePair v, BuiltinUnary op) {
   }
 }
 
-ValuePair handleBinary(ValuePair lhs, ValuePair rhs, BinOp op) {
+ALWAYS_INLINE ValuePair handleBinary(ValuePair lhs, ValuePair rhs, BinOp op) {
   bool equal = false;
   switch (op) {
     case BinOp::LT:
@@ -122,17 +124,17 @@ ValuePair Evaluator::eval(int id) {
   int pc = 0;
 
   auto bufferCheck = [&](int offset) {
-    if (pc + offset >= fn->instructions.size()) invalid();
+    if (UNLIKELY(pc + offset >= fn->instructions.size())) invalid();
   };
   auto popSecond = [&] {
-    if (tagStack.empty() || valueStack.empty()) invalid();
+    if (UNLIKELY(tagStack.empty() || valueStack.empty())) invalid();
     ValuePair result = std::make_pair(tagStack.back(), valueStack.back());
     tagStack.pop_back();
     valueStack.pop_back();
     return result;
   };
   auto saveTop = [&] {
-    if (notop) {
+    if (UNLIKELY(notop)) {
       notop = false;
       return;
     }
@@ -141,19 +143,10 @@ ValuePair Evaluator::eval(int id) {
   };
 
   long counter = 0;
-  while (pc < fn->instructions.size() && flag.load(std::memory_order_relaxed)) {
+  while (true) {
     counter++;
     Instruction inst = static_cast<Instruction>(fn->instructions[pc]);
     switch (inst) {
-      case Instruction::AddI: {
-        auto [immediate, offset] = getImmediate(fn, pc);
-        if (top.first == ValueTag::NUMBER)
-          top.second.number += immediate;
-        else
-          unimplemented();
-        pc += offset;
-        break;
-      }
       case Instruction::GetI: {
         auto [immediate, offset] = getImmediate(fn, pc);
         saveTop();
@@ -163,15 +156,13 @@ ValuePair Evaluator::eval(int id) {
         pc += offset;
         break;
       }
-      case Instruction::GetParentI: {
-        unsigned char ancestor = fn->instructions[pc + 1];
-        auto [immediate, offset] = getImmediate(fn, pc + 1);
-        saveTop();
-        if (spStack.size() < ancestor * 2) invalid();
-        int index = spStack[spStack.size() - ancestor * 2] + immediate;
-        if (index < 0 || index >= tagStack.size()) invalid();
-        top = copy(std::make_pair(tagStack[index], valueStack[index]));
-        pc += offset + 1;
+      case Instruction::AddI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
+        if (LIKELY(top.first == ValueTag::NUMBER))
+          top.second.number += immediate;
+        else
+          unimplemented();
+        pc += offset;
         break;
       }
       case Instruction::SetI: {
@@ -180,24 +171,6 @@ ValuePair Evaluator::eval(int id) {
         if (index < 0 || index >= tagStack.size()) invalid();
         tagStack[index] = top.first;
         valueStack[index] = top.second;
-        top = popSecond();
-        pc += offset;
-        break;
-      }
-      case Instruction::GetGlobalI: {
-        auto [immediate, offset] = getImmediate(fn, pc);
-        saveTop();
-        if (immediate < 0 || immediate >= globalTags.size()) invalid();
-        top = copy(
-            std::make_pair(globalTags[immediate], globalValues[immediate]));
-        pc += offset;
-        break;
-      }
-      case Instruction::SetGlobalI: {
-        auto [immediate, offset] = getImmediate(fn, pc);
-        if (immediate < 0 || immediate >= globalTags.size()) invalid();
-        globalTags[immediate] = top.first;
-        globalValues[immediate] = top.second;
         top = popSecond();
         pc += offset;
         break;
@@ -216,39 +189,16 @@ ValuePair Evaluator::eval(int id) {
         pc = target;
         break;
       }
-      case Instruction::CallI: {
-        auto [immediate, offset] = getImmediate(fn, pc);
-        if (immediate >= functions.size()) invalid();
-        fn = &functions[immediate];
-        saveTop();
-        pcStack.push_back(pc + offset);
-        rpStack.push_back(immediate);
-        spStack.push_back(valueStack.size() - fn->parameters);
-        pc = 0;
-        notop = true;
+      case Instruction::Pop: {
+        drop(top);
+        top = popSecond();
+        pc += 1;
         break;
       }
-      case Instruction::TailCallI: {
-        auto [immediate, offset] = getImmediate(fn, pc);
-        if (immediate >= functions.size()) invalid();
-        fn = &functions[immediate];
+      case Instruction::Dup: {
         saveTop();
-
-        int sp = spStack.back();
-        int params = fn->parameters;
-        int stackEnd = valueStack.size() - params;
-        for (int i = sp; i < stackEnd; i++) {
-          drop(std::make_pair(tagStack[i], valueStack[i]));
-        }
-        for (int i = 0; i < params; i++) {
-          tagStack[sp + i] = tagStack[stackEnd + i];
-          valueStack[sp + i] = valueStack[stackEnd + i];
-        }
-        tagStack.resize(sp + params);
-        valueStack.resize(sp + params);
-        rpStack.back() = immediate;
-        pc = 0;
-        notop = true;
+        top = copy(top);
+        pc += 1;
         break;
       }
       case Instruction::BuiltinUnaryOp: {
@@ -291,16 +241,68 @@ ValuePair Evaluator::eval(int id) {
         pc += 2;
         break;
       }
-      case Instruction::Pop: {
-        drop(top);
-        top = popSecond();
-        pc += 1;
+      case Instruction::GetParentI: {
+        unsigned char ancestor = fn->instructions[pc + 1];
+        auto [immediate, offset] = getImmediate(fn, pc + 1);
+        saveTop();
+        if (spStack.size() < ancestor * 2) invalid();
+        int index = spStack[spStack.size() - ancestor * 2] + immediate;
+        if (index < 0 || index >= tagStack.size()) invalid();
+        top = copy(std::make_pair(tagStack[index], valueStack[index]));
+        pc += offset + 1;
         break;
       }
-      case Instruction::Dup: {
+      case Instruction::GetGlobalI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
         saveTop();
-        top = copy(top);
-        pc += 1;
+        if (immediate < 0 || immediate >= globalTags.size()) invalid();
+        top = copy(
+            std::make_pair(globalTags[immediate], globalValues[immediate]));
+        pc += offset;
+        break;
+      }
+      case Instruction::SetGlobalI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
+        if (immediate < 0 || immediate >= globalTags.size()) invalid();
+        globalTags[immediate] = top.first;
+        globalValues[immediate] = top.second;
+        top = popSecond();
+        pc += offset;
+        break;
+      }
+      case Instruction::CallI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
+        if (immediate >= functions.size()) invalid();
+        fn = &functions[immediate];
+        saveTop();
+        pcStack.push_back(pc + offset);
+        rpStack.push_back(immediate);
+        spStack.push_back(valueStack.size() - fn->parameters);
+        pc = 0;
+        notop = true;
+        break;
+      }
+      case Instruction::TailCallI: {
+        auto [immediate, offset] = getImmediate(fn, pc);
+        if (immediate >= functions.size()) invalid();
+        fn = &functions[immediate];
+        saveTop();
+
+        int sp = spStack.back();
+        int params = fn->parameters;
+        int stackEnd = valueStack.size() - params;
+        for (int i = sp; i < stackEnd; i++) {
+          drop(std::make_pair(tagStack[i], valueStack[i]));
+        }
+        for (int i = 0; i < params; i++) {
+          tagStack[sp + i] = tagStack[stackEnd + i];
+          valueStack[sp + i] = valueStack[stackEnd + i];
+        }
+        tagStack.resize(sp + params);
+        valueStack.resize(sp + params);
+        rpStack.back() = immediate;
+        pc = 0;
+        notop = true;
         break;
       }
       case Instruction::Ret: {

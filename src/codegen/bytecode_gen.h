@@ -22,7 +22,7 @@
 #include <map>
 #include <vector>
 
-#include "ast.h"
+#include "ast_visitor.h"
 #include "frontend.h"
 #include "vm/instructions.h"
 
@@ -41,6 +41,7 @@ const std::unordered_map<std::string, BuiltinUnary> builtins = {
 // simple direct translation...
 class BytecodeGen : public AstVisitor {
  public:
+  using AstVisitor::visit;
   BytecodeGen() {}
 
   virtual void visit(NumberNode& node) override {
@@ -74,6 +75,8 @@ class BytecodeGen : public AstVisitor {
       }
     }
     // check parent scopes
+    // two cases, either nested module or lambda
+    // if we want to handle lambda, we should be using proper closure
     for (int i = 1; i < variableLookup.size() - 1; i++) {
       const auto iter =
           variableLookup[variableLookup.size() - i - 1].find(node.name);
@@ -99,7 +102,7 @@ class BytecodeGen : public AstVisitor {
   }
 
   virtual void visit(UnaryOpNode& node) override {
-    node.operand->visit(*this);
+    visit(node.operand);
     if (node.op == UnaryOp::NOT)
       addUnaryOp(tail->instructions, BuiltinUnary::NOT);
     else  // if (node.op == UnaryOp::NEG)
@@ -107,8 +110,8 @@ class BytecodeGen : public AstVisitor {
   }
 
   virtual void visit(BinaryOpNode& node) override {
-    node.lhs->visit(*this);
-    node.rhs->visit(*this);
+    visit(node.lhs);
+    visit(node.rhs);
     addBinOp(tail->instructions, node.op);
   }
 
@@ -119,7 +122,7 @@ class BytecodeGen : public AstVisitor {
     if (ident == nullptr)
       throw std::runtime_error("lambda not supported for now");
     for (auto& arg : node.args) {
-      arg.expr->visit(*this);
+      visit(arg.expr);
     }
     auto iter = functionMap.find(std::make_pair(currentFile, ident->name));
     if (iter != functionMap.end()) {
@@ -135,20 +138,20 @@ class BytecodeGen : public AstVisitor {
   }
 
   virtual void visit(IfExprNode& node) override {
-    node.cond->visit(*this);
+    visit(node.cond);
     int currentid = currentbb;
 
     funbody.emplace_back();
     int trueid = funbody.size() - 1;
     currentbb = trueid;
     tail = &funbody[trueid];
-    node.ifthen->visit(*this);
+    visit(node.ifthen);
 
     funbody.emplace_back();
     int falseid = funbody.size() - 1;
     currentbb = falseid;
     tail = &funbody[falseid];
-    node.ifelse->visit(*this);
+    visit(node.ifelse);
 
     funbody.emplace_back();
     int tailid = funbody.size() - 1;
@@ -180,7 +183,7 @@ class BytecodeGen : public AstVisitor {
       auto& args = variableLookup.emplace_back();
       for (auto& assign : fun.args)
         args.insert(std::make_pair(assign.ident, args.size()));
-      fun.body->visit(*this);
+      visit(fun.body);
       tail->next = -1;
       int i = 0;
       for (const auto& bb : funbody) {
@@ -195,6 +198,8 @@ class BytecodeGen : public AstVisitor {
       }
     }
   }
+
+  // TODO: add new AST nodes
 
  private:
   struct BasicBlock {

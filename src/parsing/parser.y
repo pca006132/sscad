@@ -80,6 +80,7 @@ std::shared_ptr<ModuleCall> makeModifier(
 %type <Expr> expr call binary unary primary exponent
 %type <std::string> module_id
 %type <std::vector<AssignNode>> argument_list parameter_list
+%type <std::vector<std::pair<Expr, bool>>> element_list
 %type <AssignNode> argument parameter assignment
 
 %%
@@ -186,11 +187,17 @@ single_module_instantiation
 expr    : binary
         | binary QUESTION expr COLON expr
           { $$ = std::make_shared<IfExprNode>($1, $3, $5, @$); }
+        | LSQUARE RSQUARE
+          { $$ = std::make_shared<ListExprNode>(std::vector<std::pair<Expr, bool>>(), @$); }
+        | LSQUARE element_list optional_comma RSQUARE
+          { $$ = std::make_shared<ListExprNode>($2, @$); }
           /* ECHO and ASSERT requires list support,
              the plan is to make them special functions that take two arguments,
              one in the form of a list and one for return */
         ;
 
+/* Instead of using rule levels to handle binary operator precedence, we use
+ * bison's precedence feature for operators */
 binary  : unary
         | binary binop unary { $$ = std::make_shared<BinaryOpNode>($1, $3, $2, @$);}
         ;
@@ -227,8 +234,8 @@ parameter_list : parameter                      { $$ = {$1}; }
                | parameter_list COMMA parameter { $$ = $1; $$.push_back($3); }
                ;
 
-parameter      : ID                             { $$ = AssignNode($1, nullptr, @$); }
-               | ID ASSIGN expr                 { $$ = AssignNode($1, $3, @$); }
+parameter      : module_id                      { $$ = AssignNode($1, nullptr, @$); }
+               | module_id ASSIGN expr          { $$ = AssignNode($1, $3, @$); }
                ;
 
 argument_list  : argument                       { $$ = {$1}; }
@@ -236,9 +243,19 @@ argument_list  : argument                       { $$ = {$1}; }
                ;
 
 argument       : expr                           { $$ = AssignNode("", $1, @$); }
-               | ID ASSIGN expr                 { $$ = AssignNode($1, $3, @$); }
+               | module_id ASSIGN expr          { $$ = AssignNode($1, $3, @$); }
                ;
 
+element_list   : expr                           { $$ = {std::make_pair($1, false)}; }
+               | EACH expr                      { $$ = {std::make_pair($2, true)}; }
+               | element_list COMMA expr        { $$ = $1; $$.emplace_back($3, false); }
+               | element_list COMMA EACH expr   { $$ = $1; $$.emplace_back($4, true); }
+               /* | FOR LPAREN assignment_list RPAREN generators
+                 {  } */
+               ;
+
+/* at least for the "each" keyword, it causes ambiguity when allowed to use as
+ * module names */
 module_id      : ID                             { $$ = $1; }
                | FOR                            { $$ = "for"; }
                | LET                            { $$ = "let"; }

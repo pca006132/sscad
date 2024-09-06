@@ -109,7 +109,7 @@ int main() {
   addInst(pureloop, Instruction::AddI, 1);
   addInst(pureloop, Instruction::JumpI, pureloopInner - pureloop.size());
 
-  print(std::cout, pureloop);
+  // print(std::cout, pureloop);
 
   Evaluator evaluator(
       &std::cout,

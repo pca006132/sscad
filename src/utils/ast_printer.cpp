@@ -21,7 +21,7 @@ namespace sscad {
 void AstPrinter::visit(AssignNode &assign) {
   *ostream << "Assign(" << assign.ident << ", ";
   if (assign.expr != nullptr)
-    assign.expr->visit(*this);
+    visit(assign.expr);
   else
     *ostream << "undef";
   *ostream << ", loc=" << assign.loc << ")";
@@ -34,12 +34,12 @@ void AstPrinter::visit(ModuleBody &body) {
     if (!start) *ostream << ",";
     start = false;
     *ostream << assign.ident << " = ";
-    assign.expr->visit(*this);
+    visit(assign.expr);
   }
   for (const auto &child : body.children) {
     if (!start) *ostream << ",";
     start = false;
-    child->visit(*this);
+    visit(child);
   }
   *ostream << "]";
 }
@@ -52,12 +52,12 @@ void AstPrinter::visit(SingleModuleCall &single) {
     if (!start) *ostream << ",";
     start = false;
     if (!assign.ident.empty()) *ostream << assign.ident << "=";
-    assign.expr->visit(*this);
+    visit(assign.expr);
   }
   *ostream << "), ";
   if (!single.body.children.empty() || !single.body.assignments.empty()) {
     *ostream << "body=";
-    single.body.visit(*this);
+    visit(single.body);
     *ostream << ", ";
   }
   *ostream << "loc=" << single.loc << ")";
@@ -65,12 +65,12 @@ void AstPrinter::visit(SingleModuleCall &single) {
 
 void AstPrinter::visit(IfModule &ifmodule) {
   *ostream << "If(cond=";
-  ifmodule.args[0].expr->visit(*this);
+  visit(ifmodule.args[0].expr);
   *ostream << ", then=";
-  ifmodule.ifthen.visit(*this);
+  visit(ifmodule.ifthen);
   if (!ifmodule.ifelse.children.empty()) {
     *ostream << ", else=";
-    ifmodule.ifelse.visit(*this);
+    visit(ifmodule.ifelse);
   }
 
   *ostream << ", loc=" << ifmodule.loc << ")";
@@ -78,7 +78,7 @@ void AstPrinter::visit(IfModule &ifmodule) {
 
 void AstPrinter::visit(ModuleModifier &modifier) {
   *ostream << modifier.modifier;
-  modifier.module->visit(*this);
+  visit(modifier.module);
 }
 
 void AstPrinter::visit(ModuleDecl &module) {
@@ -88,7 +88,7 @@ void AstPrinter::visit(ModuleDecl &module) {
     if (!start) *ostream << ",";
     start = false;
     *ostream << assign.ident << "=";
-    if (assign.expr != nullptr) assign.expr->visit(*this);
+    if (assign.expr != nullptr) visit(assign.expr);
   }
   *ostream << "), ";
   visit(module.body);
@@ -102,10 +102,10 @@ void AstPrinter::visit(FunctionDecl &fun) {
     if (!start) *ostream << ",";
     start = false;
     *ostream << assign.ident << "=";
-    if (assign.expr != nullptr) assign.expr->visit(*this);
+    if (assign.expr != nullptr) visit(assign.expr);
   }
   *ostream << "), ";
-  fun.body->visit(*this);
+  visit(fun.body);
   *ostream << ", loc=" << fun.loc << ")";
 }
 
@@ -148,40 +148,40 @@ void AstPrinter::visit(IdentNode &ident) {
 
 void AstPrinter::visit(UnaryOpNode &unary) {
   *ostream << "Unary(" << unary.op << ", ";
-  unary.operand->visit(*this);
+  visit(unary.operand);
   *ostream << ", loc=" << unary.loc << ")";
 }
 
 void AstPrinter::visit(BinaryOpNode &binary) {
   *ostream << "Binary(" << binary.op << ", ";
-  binary.lhs->visit(*this);
+  visit(binary.lhs);
   *ostream << ", ";
-  binary.rhs->visit(*this);
+  visit(binary.rhs);
   *ostream << ", loc=" << binary.loc << ")";
 }
 
 void AstPrinter::visit(CallNode &call) {
   *ostream << "Call(";
-  call.fun->visit(*this);
+  visit(call.fun);
   *ostream << ", args=(";
   bool start = true;
   for (const auto &assign : call.args) {
     if (!start) *ostream << ",";
     start = false;
     if (!assign.ident.empty()) *ostream << assign.ident << "=";
-    assign.expr->visit(*this);
+    visit(assign.expr);
   }
   *ostream << "), loc=" << call.loc << ")";
 }
 
 void AstPrinter::visit(IfExprNode &ifcond) {
   *ostream << "IfExpr(cond=";
-  ifcond.cond->visit(*this);
+  visit(ifcond.cond);
   *ostream << ", then=";
-  ifcond.ifthen->visit(*this);
+  visit(ifcond.ifthen);
   if (ifcond.ifelse != nullptr) {
     *ostream << ", else=";
-    ifcond.ifelse->visit(*this);
+    visit(ifcond.ifelse);
   }
 
   *ostream << ", loc=" << ifcond.loc << ")";
@@ -205,7 +205,7 @@ void AstPrinter::visit(TranslationUnit &unit) {
   }
   *ostream << "module calls:" << std::endl;
   for (auto &call : unit.moduleCalls) {
-    call->visit(*this);
+    visit(call);
     *ostream << std::endl;
   }
 }

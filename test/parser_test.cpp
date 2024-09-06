@@ -21,6 +21,7 @@
 #include "codegen/bytecode_gen.h"
 #include "frontend.h"
 #include "utils/ast_printer.h"
+#include "parser.h"
 
 using namespace sscad;
 using namespace std::string_literals;
@@ -56,6 +57,14 @@ int main() {
                  "echo(-(1 + 1 == 2 ? 5 : 6));";
         break;
       case 3:
+        (*ss) << "$a = 1;\n"
+                 "function bar() = $a;\n"
+                 "module foo() {\n"
+                 "  $a = 2;\n"
+                 "  echo(bar());\n"
+                 "}";
+        break;
+      case 4:
         (*ss) << "echo(a * b + c * d > 12 && foo ^ bar);\r\n"
                  "echo(a+b+c\n+d);\nfoo@";
         break;
@@ -77,7 +86,14 @@ int main() {
     generator.visit(module);
     printer.visit(module);
     std::cout << "===================" << std::endl;
-    printer.visit(fe.parse(3));
+    module = fe.parse(3);
+    const_eval_ptr->visit(module);
+    generator.visit(module);
+    printer.visit(module);
+    std::cout << "===================" << std::endl;
+    fe.parse(4);
+  } catch (const Parser::syntax_error &e) {
+    std::cout << e.what() << " at " << e.location << std::endl;
   } catch (const std::exception& e) {
     std::cout << e.what() << std::endl;
   }
