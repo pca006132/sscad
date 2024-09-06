@@ -254,8 +254,6 @@ element_list   : expr                           { $$ = {std::make_pair($1, false
                  {  } */
                ;
 
-/* at least for the "each" keyword, it causes ambiguity when allowed to use as
- * module names */
 module_id      : ID                             { $$ = $1; }
                | FOR                            { $$ = "for"; }
                | LET                            { $$ = "let"; }
