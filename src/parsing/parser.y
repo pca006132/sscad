@@ -77,10 +77,11 @@ std::shared_ptr<ModuleCall> makeModifier(
 %type <std::shared_ptr<SingleModuleCall>> single_module_instantiation 
 %type <std::shared_ptr<ModuleCall>> module_instantiation
 %type <BinOp> binop
-%type <Expr> expr call binary unary primary exponent
+%type <Expr> expr expr2 call binary unary primary exponent
 %type <std::string> module_id
-%type <std::vector<AssignNode>> argument_list parameter_list
+%type <std::vector<AssignNode>> argument_list parameter_list assign_list
 %type <std::vector<std::pair<Expr, bool>>> element_list
+%type <std::vector<std::tuple<Expr, Expr, bool>>> generators
 %type <AssignNode> argument parameter assignment
 
 %%
@@ -184,13 +185,28 @@ single_module_instantiation
         { $$ = std::make_shared<SingleModuleCall>($1, $3, ModuleBody(), @$); }
         ;
 
-expr    : binary
-        | binary QUESTION expr COLON expr
+expr    : binary QUESTION expr COLON expr
           { $$ = std::make_shared<IfExprNode>($1, $3, $5, @$); }
+        | LET LPAREN assign_list RPAREN expr
+          { $$ = std::make_shared<LetNode>($3, $5, @$); }
+        | FUNCTION LPAREN parameter_list RPAREN expr
+          { $$ = std::make_shared<LambdaNode>($3, $5, @$); }
+        | expr2
+          { $$ = $1; }
+        ;
+
+expr2   : binary
         | LSQUARE RSQUARE
           { $$ = std::make_shared<ListExprNode>(std::vector<std::pair<Expr, bool>>(), @$); }
         | LSQUARE element_list optional_comma RSQUARE
           { $$ = std::make_shared<ListExprNode>($2, @$); }
+        | LSQUARE expr COLON expr RSQUARE
+          { $$ = std::make_shared<RangeNode>(
+              $2, std::make_shared<NumberNode>(1, @$), $4, @$); }
+        | LSQUARE expr COLON expr COLON expr RSQUARE
+          { $$ = std::make_shared<RangeNode>( $2, $4, $6, @$); }
+        | expr2 LSQUARE expr RSQUARE
+          { $$ = std::make_shared<ListIndexNode>($1, $3, @$); }
           /* ECHO and ASSERT requires list support,
              the plan is to make them special functions that take two arguments,
              one in the form of a list and one for return */
@@ -250,8 +266,38 @@ element_list   : expr                           { $$ = {std::make_pair($1, false
                | EACH expr                      { $$ = {std::make_pair($2, true)}; }
                | element_list COMMA expr        { $$ = $1; $$.emplace_back($3, false); }
                | element_list COMMA EACH expr   { $$ = $1; $$.emplace_back($4, true); }
-               /* | FOR LPAREN assignment_list RPAREN generators
-                 {  } */
+               | FOR LPAREN assign_list RPAREN generators
+                 { $$ = { std::make_pair(std::make_shared<ListCompNode>($3, $5, @$), true) }; }
+               | element_list COMMA FOR LPAREN assign_list RPAREN generators
+                 { $$ = $1; $$.emplace_back( std::make_shared<ListCompNode>($5, $7, @$), true); }
+               | FOR LPAREN assign_list SEMI expr SEMI assign_list RPAREN generators
+                 { $$ = { std::make_pair(std::make_shared<ListCompCNode>($3, $5, $7, $9, @$), true) }; }
+               | element_list COMMA FOR LPAREN assign_list SEMI expr SEMI assign_list RPAREN generators
+                 { $$ = $1; $$.emplace_back(std::make_shared<ListCompCNode>($5, $7, $9, $11, @$), true) ; }
+               ;
+
+assign_list    : assignment                     { $$ = {$1}; }
+               | assign_list COMMA assignment   { $$ = $1; $$.push_back($3); }
+               ;
+
+generators     : IF LPAREN expr RPAREN expr ELSE generators
+                 { $$ = $7; $$.insert($$.begin(), std::make_tuple($3, $5, false)); }
+               | IF LPAREN expr RPAREN EACH expr ELSE generators
+                 { $$ = $8; $$.insert($$.begin(), std::make_tuple($3, $6, true)); }
+               | IF LPAREN expr RPAREN expr
+                 { $$ = std::vector<std::tuple<Expr, Expr, bool>>();
+                   $$.insert($$.begin(), std::make_tuple($3, $5, false)); }
+               | IF LPAREN expr RPAREN EACH expr
+                 { $$ = std::vector<std::tuple<Expr, Expr, bool>>();
+                   $$.insert($$.begin(), std::make_tuple($3, $6, true)); }
+               | expr
+                 { $$ = std::vector<std::tuple<Expr, Expr, bool>>();
+                   $$.insert($$.begin(), std::make_tuple(
+                     std::make_shared<NumberNode>(1, @$), $1, false)); }
+               | EACH expr
+                 { $$ = std::vector<std::tuple<Expr, Expr, bool>>();
+                   $$.insert($$.begin(), std::make_tuple(
+                     std::make_shared<NumberNode>(1, @$), $2, true)); }
                ;
 
 module_id      : ID                             { $$ = $1; }
