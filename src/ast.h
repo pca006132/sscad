@@ -31,7 +31,7 @@ struct Node {
   Node(Location loc) : loc(loc) {}
 
   Location loc;
-  virtual void dummy() {}
+  virtual void dummy() {} // for typeid
 };
 
 struct ExprNode : public Node {

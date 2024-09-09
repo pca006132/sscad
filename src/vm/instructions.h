@@ -61,10 +61,6 @@ enum class Instruction : unsigned char {
   // true if the next byte is 1, and false if the next byte is 0.
   // next instruction index: current + 2
   ConstMisc,
-  // copy and push the j-th local in the i-th ancestor scope to the top of the
-  // stack. used for module children statements
-  // note that the next byte is i, and the next immediate is j
-  GetParentI,
   // copy and push the i-th global to the top of the stack.
   GetGlobalI,
   // pop and set the i-th global as the top of the stack.

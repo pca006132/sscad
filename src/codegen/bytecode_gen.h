@@ -78,15 +78,7 @@ class BytecodeGen : public AstVisitor {
     // two cases, either nested module or lambda
     // if we want to handle lambda, we should be using proper closure
     for (int i = 1; i < variableLookup.size() - 1; i++) {
-      const auto iter =
-          variableLookup[variableLookup.size() - i - 1].find(node.name);
-      if (iter != variableLookup.back().end()) {
-        addInst(tail->instructions, Instruction::GetParentI);
-        assert(i < 255);
-        tail->instructions.push_back(static_cast<unsigned char>(i));
-        addImm(tail->instructions, iter->second);
-        return;
-      }
+      // TODO
     }
     // check file scope
     {

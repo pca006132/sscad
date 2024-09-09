@@ -241,17 +241,6 @@ ValuePair Evaluator::eval(int id) {
         pc += 2;
         break;
       }
-      case Instruction::GetParentI: {
-        unsigned char ancestor = fn->instructions[pc + 1];
-        auto [immediate, offset] = getImmediate(fn, pc + 1);
-        saveTop();
-        if (spStack.size() < ancestor * 2) invalid();
-        int index = spStack[spStack.size() - ancestor * 2] + immediate;
-        if (index < 0 || index >= tagStack.size()) invalid();
-        top = copy(std::make_pair(tagStack[index], valueStack[index]));
-        pc += offset + 1;
-        break;
-      }
       case Instruction::GetGlobalI: {
         auto [immediate, offset] = getImmediate(fn, pc);
         saveTop();

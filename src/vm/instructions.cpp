@@ -73,8 +73,6 @@ std::string getInstName(Instruction inst) {
       return "AddI";
     case Instruction::GetI:
       return "GetI";
-    case Instruction::GetParentI:
-      return "GetParentI";
     case Instruction::SetI:
       return "SetI";
     case Instruction::GetGlobalI:
@@ -192,11 +190,6 @@ void print(std::ostream &ostream,
           pc += offset;
           break;
         }
-        case Instruction::GetParentI: {
-          auto [_, offset] = getImmediate(instructions, pc + 1);
-          pc += offset + 1;
-          break;
-        }
         case Instruction::BuiltinUnaryOp:
         case Instruction::BinaryOp:
         case Instruction::ConstMisc: {
@@ -253,14 +246,6 @@ void print(std::ostream &ostream,
           ostream << immediate;
         ostream << std::endl;
         pc += offset;
-        break;
-      }
-      case Instruction::GetParentI: {
-        unsigned char ancestor = instructions[pc + 1];
-        auto [immediate, offset] = getImmediate(instructions, pc + 1);
-        ostream << getInstName(inst) << " " << static_cast<int>(ancestor) << " "
-                << immediate << std::endl;
-        pc += offset + 1;
         break;
       }
       case Instruction::BuiltinUnaryOp: {
