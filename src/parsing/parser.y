@@ -207,6 +207,11 @@ expr2   : binary
           { $$ = std::make_shared<RangeNode>( $2, $4, $6, @$); }
         | expr2 LSQUARE expr RSQUARE
           { $$ = std::make_shared<ListIndexNode>($1, $3, @$); }
+        | expr2 DOT ID
+          { auto s = $3;
+            auto id = s == "x" ? 0 : s == "y" ? 1 : s == "z" ? 2 : -1;
+            if (id == -1) throw sscad::Parser::syntax_error(@$, "unexpected " + s);
+            $$ = std::make_shared<ListIndexNode>($1, std::make_shared<NumberNode>(id, @$), @$); }
           /* ECHO and ASSERT requires list support,
              the plan is to make them special functions that take two arguments,
              one in the form of a list and one for return */
