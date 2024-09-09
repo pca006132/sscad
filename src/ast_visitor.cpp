@@ -250,7 +250,10 @@ Expr ExprMap::map(LetNode &node) {
 Expr ExprMap::map(LambdaNode &node) {
   std::vector<AssignNode> params;
   for (auto &assignment : node.params)
-    params.emplace_back(assignment.ident, map(assignment.expr), assignment.loc);
+    params.emplace_back(
+        assignment.ident,
+        assignment.expr == nullptr ? nullptr : map(assignment.expr),
+        assignment.loc);
   return std::make_shared<LambdaNode>(params, map(node.expr), node.loc);
 }
 

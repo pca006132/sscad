@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
     // std::cout << "===================" << std::endl;
     auto module = fe.parse(0);
     const_eval_ptr->visit(module);
-    generator.visit(module);
+    // generator.visit(module);
     printer.visit(module);
     // std::cout << "===================" << std::endl;
     // module = fe.parse(3);
