@@ -14,88 +14,93 @@
  * limitations under the License.
  */
 
+#include "parser.h"
+
+#include <fstream>
 #include <iostream>
 #include <sstream>
 
-#include "codegen/const_eval.h"
 #include "codegen/bytecode_gen.h"
+#include "codegen/const_eval.h"
 #include "frontend.h"
 #include "utils/ast_printer.h"
-#include "parser.h"
 
 using namespace sscad;
 using namespace std::string_literals;
 
-int main() {
+int main(int argc, char** argv) {
   auto printer = AstPrinter(&std::cout);
   auto resolver = [](std::string name, sscad::FileHandle src) {
-    if (name == "a") return 0;
-    if (name == "b") return 1;
-    if (name == "c") return 2;
-    throw std::runtime_error("unknown file "s + name);
+    return 0;
+    // if (name == "a") return 0;
+    // if (name == "b") return 1;
+    // if (name == "c") return 2;
+    // throw std::runtime_error("unknown file "s + name);
   };
-  auto provider = [](sscad::FileHandle src) {
-    auto ss = std::make_unique<std::stringstream>();
-    switch (src) {
-      case 0:
-        (*ss) << "echo(a + b(123, c = 456));\n"
-                 "function foo(x) = x + 1;";
-        break;
-      case 1:
-        (*ss) << "include<a>\n"
-                 "echo(foo + naïve);\n"
-                 "foo2(123) { cube(); }\n"
-                 "module foo2(a, b = 2) { cube(); children(); }\n"
-                 "*if (1+1==2) cube();\n"
-                 "if (1+1==2) { a(foo() ? x : y + 2); } else { b(); }";
-        break;
-      case 2:
-        (*ss) << "a = 1;\n"
-                 "b = 2;\n"
-                 "a = b + 1;\n"
-                 "function foo(a, b) = a > 0 ? foo(a-1, b+2) : b;\n"
-                 "echo(-(1 + 1 == 2 ? 5 : 6));";
-        break;
-      case 3:
-        (*ss) << "$a = 1;\n"
-                 "function bar() = $a;\n"
-                 "module foo() {\n"
-                 "  $a = 2;\n"
-                 "  echo(bar());\n"
-                 "}";
-        break;
-      case 4:
-        (*ss) << "echo(a * b + c * d > 12 && foo ^ bar);\r\n"
-                 "echo(a+b+c\n+d);\nfoo@";
-        break;
-    }
-    return ss;
-  };
+  auto f = std::make_shared<std::ifstream>(argv[1]);
+  auto provider = [&](sscad::FileHandle src) { return f; };
+  //   auto ss = std::make_unique<std::stringstream>();
+  //   switch (src) {
+  //     case 0:
+  //       (*ss) << "echo(a + b(123, c = 456));\n"
+  //                "function foo(x) = x + 1;";
+  //       break;
+  //     case 1:
+  //       (*ss) << "include<a>\n"
+  //                "echo(foo + naïve);\n"
+  //                "foo2(123) { cube(); }\n"
+  //                "module foo2(a, b = 2) { cube(); children(); }\n"
+  //                "*if (1+1==2) cube();\n"
+  //                "if (1+1==2) { a(foo() ? x : y + 2); } else { b(); }";
+  //       break;
+  //     case 2:
+  //       (*ss) << "a = 1;\n"
+  //                "b = 2;\n"
+  //                "a = b + 1;\n"
+  //                "function foo(a, b) = a > 0 ? foo(a-1, b+2) : b;\n"
+  //                "echo(-(1 + 1 == 2 ? 5 : 6));";
+  //       break;
+  //     case 3:
+  //       (*ss) << "$a = 1;\n"
+  //                "function bar() = $a;\n"
+  //                "module foo() {\n"
+  //                "  $a = 2;\n"
+  //                "  echo(bar());\n"
+  //                "}";
+  //       break;
+  //     case 4:
+  //       (*ss) << "echo(a * b + c * d > 12 && foo ^ bar);\r\n"
+  //                "echo(a+b+c\n+d);\nfoo@";
+  //       break;
+  //   }
+  //   return ss;
+  // };
 
   Frontend fe(resolver, provider);
   ConstEvaluator const_eval;
   BytecodeGen generator;
   AstVisitor* const_eval_ptr = &const_eval;
   try {
-    printer.visit(fe.parse(0));
-    std::cout << "===================" << std::endl;
-    printer.visit(fe.parse(1));
-    std::cout << "===================" << std::endl;
-    auto module = fe.parse(2);
+    // printer.visit(fe.parse(0));
+    // std::cout << "===================" << std::endl;
+    // printer.visit(fe.parse(1));
+    // std::cout << "===================" << std::endl;
+    auto module = fe.parse(0);
     const_eval_ptr->visit(module);
     generator.visit(module);
     printer.visit(module);
-    std::cout << "===================" << std::endl;
-    module = fe.parse(3);
-    const_eval_ptr->visit(module);
-    generator.visit(module);
-    printer.visit(module);
-    std::cout << "===================" << std::endl;
-    fe.parse(4);
-  } catch (const Parser::syntax_error &e) {
+    // std::cout << "===================" << std::endl;
+    // module = fe.parse(3);
+    // const_eval_ptr->visit(module);
+    // generator.visit(module);
+    // printer.visit(module);
+    // std::cout << "===================" << std::endl;
+    // fe.parse(4);
+  } catch (const Parser::syntax_error& e) {
     std::cout << e.what() << " at " << e.location << std::endl;
   } catch (const std::exception& e) {
     std::cout << e.what() << std::endl;
   }
+  f->close();
   return 0;
 }

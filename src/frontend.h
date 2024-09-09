@@ -47,7 +47,7 @@ class Frontend {
   // second parameter: source file handle for the include/use statement
   using FileResolver = std::function<FileHandle(std::string, FileHandle)>;
   // provide the input stream given a file handle
-  using FileProvider = std::function<std::unique_ptr<std::istream>(FileHandle)>;
+  using FileProvider = std::function<std::shared_ptr<std::istream>(FileHandle)>;
 
   Frontend(FileResolver resolver, FileProvider provider);
 

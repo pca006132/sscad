@@ -39,7 +39,7 @@ class Frontend;
 class Scanner : public yyFlexLexer {
  public:
   Scanner(Frontend &frontend, TranslationUnit &unit,
-          std::unique_ptr<std::istream> istream);
+          std::shared_ptr<std::istream> istream);
   virtual ~Scanner();
   virtual sscad::Parser::symbol_type getNextToken();
 
@@ -50,7 +50,7 @@ class Scanner : public yyFlexLexer {
   std::string stringcontents;
   U_ICU_NAMESPACE::BreakIterator *brkiter;
   Location loc;
-  std::stack<std::unique_ptr<std::istream>> istreams;
+  std::stack<std::shared_ptr<std::istream>> istreams;
 
   // negative if the string is not a valid identifier
   int numGraphemes(const char *str);

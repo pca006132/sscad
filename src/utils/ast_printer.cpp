@@ -187,6 +187,104 @@ void AstPrinter::visit(IfExprNode &ifcond) {
   *ostream << ", loc=" << ifcond.loc << ")";
 }
 
+void AstPrinter::visit(ListExprNode &list) {
+  *ostream << "List(";
+  for (const auto &elem : list.elements) {
+    if (elem.second) *ostream << "each ";
+    visit(elem.first);
+    *ostream << ", ";
+  }
+  *ostream << "loc=" << list.loc << ")";
+}
+
+void AstPrinter::visit(RangeNode &range) {
+  *ostream << "range(";
+  visit(range.start);
+  *ostream << ", ";
+  visit(range.step);
+  *ostream << ", ";
+  visit(range.end);
+  *ostream << ", loc=" << range.loc << ")";
+}
+
+void AstPrinter::visit(ListCompNode &node) {
+  *ostream << "listcomp(iters=(";
+  for (const auto &iter : node.assignments) {
+    *ostream << iter.ident << "=";
+    visit(iter.expr);
+    *ostream << ", ";
+  }
+  *ostream << "), generators=(";
+  for (const auto &generator : node.generators) {
+    *ostream << "(cond=";
+    visit(std::get<0>(generator));
+    *ostream << ", body=";
+    if (std::get<2>(generator)) *ostream << "each ";
+    visit(std::get<1>(generator));
+    *ostream << "), ";
+  }
+  *ostream << "), loc=" << node.loc << ")";
+}
+
+void AstPrinter::visit(ListCompCNode &node) {
+  *ostream << "listcompc(init=(";
+  for (const auto &iter : node.init) {
+    *ostream << iter.ident << "=";
+    visit(iter.expr);
+    *ostream << ", ";
+  }
+  *ostream << "), cond=";
+  visit(node.cond);
+  *ostream << "), update=(";
+  for (const auto &iter : node.update) {
+    *ostream << iter.ident << "=";
+    visit(iter.expr);
+    *ostream << ", ";
+  }
+  *ostream << "), generators=(";
+  for (const auto &generator : node.generators) {
+    *ostream << "(cond=";
+    visit(std::get<0>(generator));
+    *ostream << ", body=";
+    if (std::get<2>(generator)) *ostream << "each ";
+    visit(std::get<1>(generator));
+    *ostream << "), ";
+  }
+  *ostream << "), loc=" << node.loc << ")";
+}
+
+void AstPrinter::visit(ListIndexNode &node) {
+  *ostream << "index(";
+  visit(node.list);
+  *ostream << ", ";
+  visit(node.index);
+  *ostream << ", loc=" << node.loc << ")";
+}
+
+void AstPrinter::visit(LetNode &node) {
+  *ostream << "let(bindings=(";
+  for (const auto &iter : node.bindings) {
+    *ostream << iter.ident << "=";
+    visit(iter.expr);
+    *ostream << ", ";
+  }
+  *ostream << "), ";
+  visit(node.expr);
+  *ostream << "), loc=" << node.loc << ")";
+}
+
+void AstPrinter::visit(LambdaNode &node) {
+  *ostream << "lambda(bindings=(";
+  for (const auto &iter : node.params) {
+    *ostream << iter.ident << "=";
+    if (iter.expr != nullptr) visit(iter.expr);
+    *ostream << ", ";
+  }
+  *ostream << "), ";
+  visit(node.expr);
+  *ostream << "), loc=" << node.loc << ")";
+}
+
 void AstPrinter::visit(TranslationUnit &unit) {
   *ostream << "modules:" << std::endl;
   for (auto &module : unit.modules) {

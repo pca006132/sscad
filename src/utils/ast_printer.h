@@ -33,6 +33,13 @@ class AstPrinter : public AstVisitor {
   virtual void visit(BinaryOpNode &) override;
   virtual void visit(CallNode &) override;
   virtual void visit(IfExprNode &) override;
+  virtual void visit(ListExprNode &) override;
+  virtual void visit(RangeNode &) override;
+  virtual void visit(ListCompNode &) override;
+  virtual void visit(ListCompCNode &) override;
+  virtual void visit(ListIndexNode &) override;
+  virtual void visit(LetNode &) override;
+  virtual void visit(LambdaNode &) override;
   virtual void visit(TranslationUnit &unit) override;
 
   // TODO: add new AST nodes

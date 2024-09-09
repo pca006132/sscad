@@ -24,7 +24,7 @@ using namespace std::string_literals;
 
 namespace sscad {
 Scanner::Scanner(Frontend &frontend, TranslationUnit &unit,
-                 std::unique_ptr<std::istream> istream)
+                 std::shared_ptr<std::istream> istream)
     : frontend(frontend), unit(unit) {
   UErrorCode status;
   brkiter = icu::BreakIterator::createCharacterInstance(

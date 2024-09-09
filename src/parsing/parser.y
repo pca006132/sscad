@@ -276,8 +276,8 @@ element_list   : expr                           { $$ = {std::make_pair($1, false
                  { $$ = $1; $$.emplace_back(std::make_shared<ListCompCNode>($5, $7, $9, $11, @$), true) ; }
                ;
 
-assign_list    : assignment                     { $$ = {$1}; }
-               | assign_list COMMA assignment   { $$ = $1; $$.push_back($3); }
+assign_list    : ID ASSIGN expr { $$ = {AssignNode($1, $3, @$)}; }
+               | assign_list COMMA ID ASSIGN expr { $$ = $1; $$.push_back(AssignNode($3, $5, @$)); }
                ;
 
 generators     : IF LPAREN expr RPAREN expr ELSE generators
