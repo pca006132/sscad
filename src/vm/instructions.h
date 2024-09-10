@@ -43,6 +43,15 @@ enum class Instruction : unsigned char {
   // pop the top of the stack, jump n bytes relative current instruction if it
   // is false, and go to the next instruction normally otherwise.
   JumpFalseI,
+  // Expects a list and an integer i at the top of the stack.
+  // Initially the integer should be -1.
+  // When the integer is less than the length of the list,
+  // increment the integer by 1 and copy the corresponding element of the list
+  // to the top of the stack (without removing anything).
+  // When the integer equals to the length of the list,
+  // pop the list and the integer from the list, and
+  // jump n bytes relative to the current instruction
+  IterList,
   // pop and discard the value in the top of the stack
   Pop,
   // duplicate and push the value in the top of the stack
@@ -71,14 +80,26 @@ enum class Instruction : unsigned char {
   TailCallI,
   // return the top value of the stack
   Ret,
+  // start, step, end, END_OF_STACK
+  // pop the last 3 numbers from the stack and push a range value in the
+  // stack
+  MakeRange,
+  // push an empty list to the stack
+  MakeList,
   // just for debugging for now
   Echo
 };
 
 // clang-format off
 enum class BuiltinUnary : unsigned char {
-  NOT, NEG, SIN, COS, TAN, ASIN, ACOS, ATAN, ABS,
-  CEIL, FLOOR, LN, LOG, NORM, ROUND, SIGN, SQRT
+  NOT,
+  // vector
+  NORM, LEN,
+  // range getters
+  RBEGIN, RSTEP, REND,
+  // numerical
+  NEG, SIN, COS, TAN, ASIN, ACOS, ATAN, ABS,
+  CEIL, FLOOR, LN, LOG, ROUND, SIGN, SQRT,
 };
 // clang-format on
 

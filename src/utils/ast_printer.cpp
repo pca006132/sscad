@@ -364,6 +364,15 @@ inline std::ostream &operator<<(std::ostream &os, BinOp op) {
     case BinOp::OR:
       os << "||";
       break;
+    case BinOp::APPEND:
+      os << "::";
+      break;
+    case BinOp::CONCAT:
+      os << "++";
+      break;
+    case BinOp::INDEX:
+      os << "[]";
+      break;
   }
   return os;
 }

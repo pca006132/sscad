@@ -15,6 +15,7 @@
  */
 #include "evaluator.h"
 
+#include <cmath>
 #include <cstring>
 #include <iostream>
 
@@ -44,13 +45,53 @@ constexpr char toHex(char n) {
 
 COLD void invalid() { throw std::runtime_error("invalid bytecode"); }
 
+constexpr ValuePair undef() {
+  return std::make_pair(ValueTag::UNDEF, SValue());
+}
+
+constexpr ValuePair value(double number) {
+  return std::make_pair(ValueTag::NUMBER, SValue{.number = number});
+}
+
+constexpr ValuePair value(size_t number) {
+  return std::make_pair(ValueTag::NUMBER,
+                        SValue{.number = static_cast<double>(number)});
+}
+
+constexpr ValuePair value(bool b) {
+  return std::make_pair(ValueTag::BOOLEAN, SValue{.cond = b});
+}
+
 ALWAYS_INLINE ValuePair copy(ValuePair v) {
-  if (isAllocated(v.first)) unimplemented();
+  if (isAllocated(v.first)) {
+    switch (v.first) {
+      case ValueTag::VECTOR:
+        return std::make_pair(ValueTag::VECTOR,
+                              SValue{.vec = new SVector{v.second.vec->values}});
+      case ValueTag::RANGE:
+        return std::make_pair(ValueTag::RANGE,
+                              SValue{.range = new SRange(*v.second.range)});
+      default:
+        unimplemented();
+    }
+  }
   return v;
 }
 
 ALWAYS_INLINE void drop(ValuePair v) {
-  if (isAllocated(v.first)) unimplemented();
+  if (isAllocated(v.first)) {
+    switch (v.first) {
+      case ValueTag::VECTOR:
+        v.second.vec->values.reset();
+        delete v.second.vec;
+        break;
+      case ValueTag::RANGE:
+        delete v.second.range;
+        break;
+      default:
+        unimplemented();
+    }
+  }
 }
 
 // return actual value and the pc increment for next function
@@ -73,36 +114,225 @@ ALWAYS_INLINE ValuePair handleUnary(ValuePair v, BuiltinUnary op) {
     case BuiltinUnary::NOT:
       // TODO: boolean cast
       if (v.first != ValueTag::BOOLEAN) unimplemented();
-      return std::make_pair(ValueTag::BOOLEAN, SValue{.cond = !v.second.cond});
+      return value(!v.second.cond);
+    case BuiltinUnary::NORM:
+      unimplemented();
+      break;
+    case BuiltinUnary::LEN: {
+      if (v.first != ValueTag::VECTOR) {
+        drop(v);
+        return undef();
+      }
+      auto s = v.second.vec->values->size();
+      drop(v);
+      return value(s);
+    }
+    case BuiltinUnary::RBEGIN:
+    case BuiltinUnary::RSTEP:
+    case BuiltinUnary::REND: {
+      if (v.first != ValueTag::RANGE) {
+        drop(v);
+        return undef();
+      }
+      auto s = (op == BuiltinUnary::RBEGIN  ? v.second.range->begin
+                : op == BuiltinUnary::RSTEP ? v.second.range->step
+                                            : v.second.range->end);
+      drop(v);
+      return value(s);
+    }
+    default:
+      break;
+  }
+
+  if (v.first != ValueTag::NUMBER) {
+    drop(v);
+    return undef();
+  }
+  switch (op) {
     case BuiltinUnary::NEG:
-      if (v.first != ValueTag::NUMBER)
-        return std::make_pair(ValueTag::UNDEF, SValue());
       return std::make_pair(ValueTag::NUMBER,
                             SValue{.number = -v.second.number});
+    case BuiltinUnary::SIN:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::sin(v.second.number)});
+    case BuiltinUnary::COS:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::cos(v.second.number)});
+    case BuiltinUnary::TAN:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::tan(v.second.number)});
+    case BuiltinUnary::ASIN:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::asin(v.second.number)});
+    case BuiltinUnary::ACOS:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::acos(v.second.number)});
+    case BuiltinUnary::ATAN:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::atan(v.second.number)});
+    case BuiltinUnary::ABS:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::abs(v.second.number)});
+    case BuiltinUnary::CEIL:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::ceil(v.second.number)});
+    case BuiltinUnary::FLOOR:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::floor(v.second.number)});
+    case BuiltinUnary::LN:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::log(v.second.number)});
+    case BuiltinUnary::LOG:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::log10(v.second.number)});
+    case BuiltinUnary::ROUND:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::round(v.second.number)});
+    case BuiltinUnary::SIGN:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = v.second.number == 0.0  ? 0.0
+                                             : v.second.number > 0.0 ? 1.0
+                                                                     : -1.0});
+    case BuiltinUnary::SQRT:
+      return std::make_pair(ValueTag::NUMBER,
+                            SValue{.number = std::sqrt(v.second.number)});
     default:
       unimplemented();
+  }
+}
+
+bool operator==(ValuePair lhs, ValuePair rhs) {
+  if (lhs.first != rhs.first) return false;
+  switch (lhs.first) {
+    case ValueTag::STRING:
+      return lhs.second.s == rhs.second.s;
+    case ValueTag::VECTOR:
+      if (lhs.second.vec->values->size() != rhs.second.vec->values->size())
+        return false;
+      for (size_t i = 0; i < lhs.second.vec->values->size(); i++) {
+        if (lhs.second.vec->values->at(i) != rhs.second.vec->values->at(i))
+          return false;
+      }
+      return true;
+    case ValueTag::RANGE:
+      return *lhs.second.range == *rhs.second.range;
+    case ValueTag::NUMBER:
+      return lhs.second.number == rhs.second.number;
+    case ValueTag::BOOLEAN:
+      return lhs.second.cond == rhs.second.cond;
+    default:
+      return true;
   }
 }
 
 ALWAYS_INLINE ValuePair handleBinary(ValuePair lhs, ValuePair rhs, BinOp op) {
   bool equal = false;
   switch (op) {
+    case BinOp::ADD:
+    case BinOp::SUB:
+    case BinOp::MUL:
+    case BinOp::DIV:
+    case BinOp::MOD:
+    case BinOp::EXP:
+      if (lhs.first != ValueTag::NUMBER || rhs.first != ValueTag::NUMBER) {
+        drop(lhs);
+        drop(rhs);
+        return undef();
+      }
+      switch (op) {
+        case BinOp::ADD:
+          return value(lhs.second.number + rhs.second.number);
+        case BinOp::SUB:
+          return value(lhs.second.number - rhs.second.number);
+        case BinOp::MUL:
+          return value(lhs.second.number * rhs.second.number);
+        case BinOp::DIV:
+          return value(lhs.second.number / rhs.second.number);
+        case BinOp::MOD:
+          return value(std::fmod(lhs.second.number, rhs.second.number));
+        case BinOp::EXP:
+          return value(std::pow(lhs.second.number, rhs.second.number));
+        default:
+          // impossible...
+          unimplemented();
+      }
     case BinOp::LT:
     case BinOp::LE:
       std::swap(lhs, rhs);
       equal = op == BinOp::LE;
       [[fallthrough]];
     case BinOp::GT:
-    case BinOp::GE: {
+    case BinOp::GE:
       if (lhs.first != ValueTag::NUMBER || rhs.first != ValueTag::NUMBER) {
         drop(lhs);
         drop(rhs);
-        return std::make_pair(ValueTag::UNDEF, SValue());
+        return undef();
       }
       if (op == BinOp::GE) equal = true;
-      bool result = lhs.second.number > rhs.second.number ||
-                    (equal && lhs.second.number == rhs.second.number);
-      return std::make_pair(ValueTag::BOOLEAN, SValue{.cond = result});
+      return value(lhs.second.number > rhs.second.number ||
+                   (equal && lhs.second.number == rhs.second.number));
+
+    case BinOp::EQ:
+    case BinOp::NEQ: {
+      bool result = lhs == rhs;
+      drop(lhs);
+      drop(rhs);
+      return value(result);
+    }
+    case BinOp::AND:
+    case BinOp::OR: {
+      if (lhs.first != ValueTag::BOOLEAN || rhs.first != ValueTag::BOOLEAN) {
+        drop(lhs);
+        drop(rhs);
+        return undef();
+      }
+      return value(op == BinOp::AND ? (lhs.second.cond && rhs.second.cond)
+                                    : (lhs.second.cond || rhs.second.cond));
+    }
+    case BinOp::APPEND:
+      if (lhs.first != ValueTag::VECTOR) {
+        drop(lhs);
+        drop(rhs);
+        return undef();
+      }
+      if (lhs.second.vec->values.use_count() != 1) {
+        auto lhsClone = new SVector{
+            std::make_shared<std::vector<ValuePair>>(*lhs.second.vec->values)};
+        drop(lhs);
+        lhs = std::make_pair(ValueTag::VECTOR, SValue{.vec = lhsClone});
+      }
+      lhs.second.vec->values->push_back(rhs);
+      return lhs;
+    case BinOp::CONCAT:
+      if (lhs.first != ValueTag::VECTOR || rhs.first != ValueTag::VECTOR) {
+        drop(lhs);
+        drop(rhs);
+        return undef();
+      }
+      if (lhs.second.vec->values.use_count() != 1) {
+        auto lhsClone = new SVector{
+            std::make_shared<std::vector<ValuePair>>(*lhs.second.vec->values)};
+        drop(lhs);
+        lhs = std::make_pair(ValueTag::VECTOR, SValue{.vec = lhsClone});
+      }
+      lhs.second.vec->values->insert(lhs.second.vec->values->end(),
+                                     rhs.second.vec->values->begin(),
+                                     rhs.second.vec->values->end());
+      return lhs;
+    case BinOp::INDEX: {
+      if (lhs.first != ValueTag::VECTOR || rhs.first != ValueTag::NUMBER) {
+        drop(lhs);
+        drop(rhs);
+        return undef();
+      }
+      auto index = static_cast<size_t>(rhs.second.number);
+      if (index < 0 || index >= lhs.second.vec->values->size()) {
+        drop(lhs);
+        return undef();
+      }
+      auto value = copy(lhs.second.vec->values->at(index));
+      drop(lhs);
+      return value;
     }
     default:
       unimplemented();
@@ -185,6 +415,27 @@ ValuePair Evaluator::eval(int id) {
           if (top.first != ValueTag::BOOLEAN) unimplemented();
           if (top.second.cond) target = pc + offset;
           top = popSecond();
+        }
+        pc = target;
+        break;
+      }
+      case Instruction::IterList: {
+        auto [immediate, offset] = getImmediate(fn, pc);
+        int target = pc + immediate;
+        if (target < 0 || target >= fn->instructions.size()) invalid();
+        if (tagStack.empty() || valueStack.empty()) invalid();
+        if (tagStack.back() != ValueTag::VECTOR) invalid();
+        if (top.first != ValueTag::NUMBER) invalid();
+        top.second.number += 1;
+        if (valueStack.back().vec->values->size() <= top.second.number) {
+          drop(popSecond());
+          top = popSecond();
+        } else {
+          auto elem =
+              copy(valueStack.back().vec->values->at(top.second.number));
+          saveTop();
+          top = elem;
+          target = pc + offset;
         }
         pc = target;
         break;
@@ -314,6 +565,33 @@ ValuePair Evaluator::eval(int id) {
         pcStack.pop_back();
         break;
       }
+      case Instruction::MakeRange: {
+        if (tagStack.size() <= 1 || valueStack.size() <= 1) invalid();
+        auto step = popSecond();
+        auto start = popSecond();
+        auto end = top;
+        if (start.first != ValueTag::NUMBER || step.first != ValueTag::NUMBER ||
+            end.first != ValueTag::NUMBER) {
+          drop(start);
+          drop(step);
+          drop(end);
+          top = undef();
+        } else {
+          top = std::make_pair(ValueTag::RANGE,
+                               SValue{.range = new SRange{start.second.number,
+                                                          step.second.number,
+                                                          end.second.number}});
+        }
+        pc += 1;
+      }
+      case Instruction::MakeList: {
+        saveTop();
+        top = std::make_pair(
+            ValueTag::VECTOR,
+            SValue{.vec = new SVector{
+                       std::make_shared<std::vector<ValuePair>>()}});
+        pc += 1;
+      }
       case Instruction::Echo: {
         if (top.first != ValueTag::NUMBER) unimplemented();
         *ostream << top.second.number << std::endl;
@@ -322,7 +600,7 @@ ValuePair Evaluator::eval(int id) {
       }
       default:
         throw std::runtime_error("unknown bytecode "s +
-                                 toHex(fn->instructions.size()));
+                                 toHex(fn->instructions[pc]));
     }
   }
   if (!flag.load(std::memory_order_relaxed)) {

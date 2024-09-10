@@ -101,6 +101,12 @@ std::string getInstName(Instruction inst) {
       return "Dup";
     case Instruction::Ret:
       return "Ret";
+    case Instruction::MakeRange:
+      return "MakeRange";
+    case Instruction::MakeList:
+      return "MakeList";
+    case Instruction::IterList:
+      return "IterList";
     case Instruction::Echo:
       return "Echo";
   }
@@ -111,6 +117,18 @@ std::ostream &operator<<(std::ostream &ostream, BuiltinUnary unary) {
     case BuiltinUnary::NOT:
       ostream << "not";
       break;
+    case BuiltinUnary::NORM:
+      ostream << "norm";
+      break;
+    case BuiltinUnary::LEN:
+      ostream << "len";
+      break;
+    case BuiltinUnary::RBEGIN:
+      ostream << "rbegin";
+    case BuiltinUnary::RSTEP:
+      ostream << "rstep";
+    case BuiltinUnary::REND:
+      ostream << "rend";
     case BuiltinUnary::NEG:
       ostream << "neg";
       break;
@@ -147,9 +165,6 @@ std::ostream &operator<<(std::ostream &ostream, BuiltinUnary unary) {
     case BuiltinUnary::LOG:
       ostream << "log";
       break;
-    case BuiltinUnary::NORM:
-      ostream << "norm";
-      break;
     case BuiltinUnary::ROUND:
       ostream << "round";
       break;
@@ -184,7 +199,8 @@ void print(std::ostream &ostream,
           break;
         }
         case Instruction::JumpI:
-        case Instruction::JumpFalseI: {
+        case Instruction::JumpFalseI:
+        case Instruction::IterList: {
           auto [immediate, offset] = getImmediate(instructions, pc);
           labelIndices.insert(pc + immediate);
           pc += offset;
@@ -203,6 +219,8 @@ void print(std::ostream &ostream,
         case Instruction::Pop:
         case Instruction::Dup:
         case Instruction::Ret:
+        case Instruction::MakeList:
+        case Instruction::MakeRange:
         case Instruction::Echo: {
           pc += 1;
           break;
@@ -235,7 +253,8 @@ void print(std::ostream &ostream,
         break;
       }
       case Instruction::JumpI:
-      case Instruction::JumpFalseI: {
+      case Instruction::JumpFalseI:
+      case Instruction::IterList: {
         auto [immediate, offset] = getImmediate(instructions, pc);
         ostream << getInstName(inst) << " ";
         if (labels)
@@ -287,6 +306,8 @@ void print(std::ostream &ostream,
       case Instruction::Pop:
       case Instruction::Dup:
       case Instruction::Ret:
+      case Instruction::MakeList:
+      case Instruction::MakeRange:
       case Instruction::Echo: {
         ostream << getInstName(inst) << std::endl;
         pc += 1;

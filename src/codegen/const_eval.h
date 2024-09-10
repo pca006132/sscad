@@ -100,6 +100,8 @@ class ConstEvaluator : public ExprMap {
         case BinOp::OR:
           result = (lhs == 0 && rhs == 0) ? 0 : 1;
           break;
+        default:
+          throw std::runtime_error("invalid AST");
       }
       return std::make_shared<NumberNode>(result, node.loc);
     }

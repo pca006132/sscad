@@ -23,7 +23,11 @@ enum class UnaryOp : unsigned char { NEG, NOT };
 // clang-format off
 enum class BinOp : unsigned char {
   ADD, SUB, MUL, DIV, MOD, EXP,
-  LT, LE, GT, GE, EQ, NEQ, AND, OR };
+  LT, LE, GT, GE, EQ, NEQ, AND, OR,
+
+  // vector related
+  APPEND, CONCAT, INDEX,
+};
 // clang-format on
 
 struct Node {

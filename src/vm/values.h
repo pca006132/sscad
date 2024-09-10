@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -57,7 +57,7 @@ enum ValueTag : char {
   // constant-time insertion performance when the usage is unique.
   //
   // TODO: Unimplemented for now
-  ARRAY,
+  // ARRAY,
   // ============================================================================
   // Just a 64-bit floating point number, nothing special.
   NUMBER = 0x10,
@@ -80,6 +80,7 @@ struct SRange;
  * by ourselves.
  * This is necessary because std::variant is huge, 24 bytes (with
  * std::shared_ptr) compared to the untagged union here (8 bytes).
+ * We treat all the allocated things as unique pointers.
  */
 union SValue {
   double number;
@@ -89,18 +90,21 @@ union SValue {
   // if vec equals NULL, the list is an empty list
   SVector* vec;
   SRange* range;
-  unsigned char* array;
+  // unsigned char* array;
 };
 
 struct SVector {
-  std::vector<ValueTag> tags;
-  std::vector<SValue> values;
+  std::shared_ptr<std::vector<std::pair<ValueTag, SValue>>> values;
 };
 
 struct SRange {
   double begin;
-  double end;
   double step;
+  double end;
+
+  constexpr bool operator==(const SRange& other) {
+    return begin == other.begin && end == other.end && step == other.step;
+  }
 };
 
 }  // namespace sscad

@@ -60,7 +60,7 @@ include[ \t\r\n]*"<"    { BEGIN(cond_include); loc.lines(yytext); }
   /* include file END */
 
   /* use file BEGIN */
-use[ \t\r\n]*"<"    { BEGIN(cond_use); loc.lines(yytext); }
+use[ \t\r\n]*"<"        { BEGIN(cond_use); loc.lines(yytext); }
 <cond_use>{
 [^\t\r\n>]*             { stringcontents = yytext; loc.columns(abs(numGraphemes(yytext))); }
 ">"                     { BEGIN(INITIAL); addUse(stringcontents); loc.step(); }
