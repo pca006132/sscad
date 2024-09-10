@@ -57,4 +57,7 @@ target_include_directories(sscad PUBLIC src)
 target_link_libraries(sscad PRIVATE ICU::uc)
 target_compile_features(sscad PUBLIC cxx_std_17)
 
+# only needed for the evaluator performance
+target_compile_options(sscad PUBLIC -mllvm -align-all-nofallthru-blocks=6)
+
 add_subdirectory(test)
