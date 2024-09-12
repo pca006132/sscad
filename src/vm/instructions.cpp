@@ -105,8 +105,8 @@ std::string getInstName(Instruction inst) {
       return "MakeRange";
     case Instruction::MakeList:
       return "MakeList";
-    case Instruction::IterList:
-      return "IterList";
+    case Instruction::Iter:
+      return "Iter";
     case Instruction::Echo:
       return "Echo";
   }
@@ -200,7 +200,7 @@ void print(std::ostream &ostream,
         }
         case Instruction::JumpI:
         case Instruction::JumpFalseI:
-        case Instruction::IterList: {
+        case Instruction::Iter: {
           auto [immediate, offset] = getImmediate(instructions, pc);
           labelIndices.insert(pc + immediate);
           pc += offset;
@@ -254,7 +254,7 @@ void print(std::ostream &ostream,
       }
       case Instruction::JumpI:
       case Instruction::JumpFalseI:
-      case Instruction::IterList: {
+      case Instruction::Iter: {
         auto [immediate, offset] = getImmediate(instructions, pc);
         ostream << getInstName(inst) << " ";
         if (labels)

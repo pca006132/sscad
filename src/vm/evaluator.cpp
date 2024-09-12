@@ -419,23 +419,37 @@ ValuePair Evaluator::eval(int id) {
         pc = target;
         break;
       }
-      case Instruction::IterList: {
+      case Instruction::Iter: {
         auto [immediate, offset] = getImmediate(fn, pc);
         int target = pc + immediate;
         if (target < 0 || target >= fn->instructions.size()) invalid();
         if (tagStack.empty() || valueStack.empty()) invalid();
-        if (tagStack.back() != ValueTag::VECTOR) invalid();
         if (top.first != ValueTag::NUMBER) invalid();
         top.second.number += 1;
-        if (valueStack.back().vec->values->size() <= top.second.number) {
-          drop(popSecond());
-          top = popSecond();
+        if (tagStack.back() == ValueTag::VECTOR) {
+          if (valueStack.back().vec->values->size() <= top.second.number) {
+            drop(popSecond());
+            top = popSecond();
+          } else {
+            auto elem =
+                copy(valueStack.back().vec->values->at(top.second.number));
+            saveTop();
+            top = elem;
+            target = pc + offset;
+          }
+        } else if (tagStack.back() == ValueTag::RANGE) {
+          auto r = *valueStack.back().range;
+          auto newValue = top.second.number * r.step + r.begin;
+          if (newValue > r.end) {
+            drop(popSecond());
+            top = popSecond();
+          } else {
+            saveTop();
+            top = value(newValue);
+            target = pc + offset;
+          }
         } else {
-          auto elem =
-              copy(valueStack.back().vec->values->at(top.second.number));
-          saveTop();
-          top = elem;
-          target = pc + offset;
+          invalid();
         }
         pc = target;
         break;

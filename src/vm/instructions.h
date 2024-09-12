@@ -51,7 +51,7 @@ enum class Instruction : unsigned char {
   // When the integer equals to the length of the list,
   // pop the list and the integer from the list, and
   // jump n bytes relative to the current instruction
-  IterList,
+  Iter,
   // pop and discard the value in the top of the stack
   Pop,
   // duplicate and push the value in the top of the stack
