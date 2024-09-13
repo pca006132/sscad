@@ -289,7 +289,7 @@ ALWAYS_INLINE ValuePair handleBinary(ValuePair lhs, ValuePair rhs, BinOp op) {
 }
 
 inline ValuePair popvalue(std::vector<ValueTag> &tagStack,
-                          std::vector<SValue> &valueStack) {
+                                        std::vector<SValue> &valueStack) {
   if (UNLIKELY(tagStack.empty() || valueStack.empty())) invalid();
   ValuePair result = ValuePair(tagStack.back(), valueStack.back());
   tagStack.pop_back();
@@ -298,8 +298,8 @@ inline ValuePair popvalue(std::vector<ValueTag> &tagStack,
 }
 
 inline void saveTop(bool &notop, const ValuePair &top,
-                    std::vector<ValueTag> &tagStack,
-                    std::vector<SValue> &valueStack) {
+                                  std::vector<ValueTag> &tagStack,
+                                  std::vector<SValue> &valueStack) {
   if (UNLIKELY(notop)) {
     notop = false;
     return;
@@ -327,8 +327,8 @@ ValuePair Evaluator::eval(int id) {
   };
 
   long counter = 0;
-  Instruction inst = static_cast<Instruction>(fn->instructions[pc]);
   while (true) {
+    Instruction inst = static_cast<Instruction>(fn->instructions[pc]);
     counter++;
     switch (inst) {
       case Instruction::GetI: {
@@ -338,7 +338,6 @@ ValuePair Evaluator::eval(int id) {
         if (index < 0 || index >= tagStack.size()) invalid();
         top = copy(ValuePair(tagStack[index], valueStack[index]));
         pc += offset;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::AddI: {
@@ -348,7 +347,6 @@ ValuePair Evaluator::eval(int id) {
         else
           unimplemented();
         pc += offset;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::SetI: {
@@ -359,7 +357,6 @@ ValuePair Evaluator::eval(int id) {
         valueStack[index] = top.value;
         top = popvalue(tagStack, valueStack);
         pc += offset;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::JumpI:
@@ -374,7 +371,6 @@ ValuePair Evaluator::eval(int id) {
           top = popvalue(tagStack, valueStack);
         }
         pc = target;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::Iter: {
@@ -410,21 +406,18 @@ ValuePair Evaluator::eval(int id) {
           invalid();
         }
         pc = target;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::Pop: {
         drop(top);
         top = popvalue(tagStack, valueStack);
         pc += 1;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::Dup: {
         saveTop(notop, top, tagStack, valueStack);
         top = copy(top);
         pc += 1;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::BuiltinUnaryOp: {
@@ -432,7 +425,6 @@ ValuePair Evaluator::eval(int id) {
         BuiltinUnary op = static_cast<BuiltinUnary>(fn->instructions[pc + 1]);
         top = handleUnary(top, op);
         pc += 2;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::BinaryOp: {
@@ -441,7 +433,6 @@ ValuePair Evaluator::eval(int id) {
         if (tagStack.empty() || valueStack.empty()) invalid();
         top = handleBinary(popvalue(tagStack, valueStack), top, op);
         pc += 2;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::ConstNum: {
@@ -451,7 +442,6 @@ ValuePair Evaluator::eval(int id) {
         saveTop(notop, top, tagStack, valueStack);
         top = ValuePair(v);
         pc += sizeof(double) + 1;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::ConstMisc: {
@@ -468,7 +458,6 @@ ValuePair Evaluator::eval(int id) {
             top = ValuePair::undef();
         }
         pc += 2;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::GetGlobalI: {
@@ -477,7 +466,6 @@ ValuePair Evaluator::eval(int id) {
         if (immediate < 0 || immediate >= globalTags.size()) invalid();
         top = copy(ValuePair(globalTags[immediate], globalValues[immediate]));
         pc += offset;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::SetGlobalI: {
@@ -487,7 +475,6 @@ ValuePair Evaluator::eval(int id) {
         globalValues[immediate] = top.value;
         top = popvalue(tagStack, valueStack);
         pc += offset;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::CallI: {
@@ -500,7 +487,6 @@ ValuePair Evaluator::eval(int id) {
         spStack.push_back(valueStack.size() - fn->parameters);
         pc = 0;
         notop = true;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::TailCallI: {
@@ -524,7 +510,6 @@ ValuePair Evaluator::eval(int id) {
         rpStack.back() = immediate;
         pc = 0;
         notop = true;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::Ret: {
@@ -545,7 +530,6 @@ ValuePair Evaluator::eval(int id) {
         fn = &functions[rpStack.back()];
         pc = pcStack.back();
         pcStack.pop_back();
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       case Instruction::MakeRange: {
@@ -566,7 +550,6 @@ ValuePair Evaluator::eval(int id) {
                                          end.value.number}});
         }
         pc += 1;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
       }
       case Instruction::MakeList: {
         saveTop(notop, top, tagStack, valueStack);
@@ -575,13 +558,11 @@ ValuePair Evaluator::eval(int id) {
                       SValue{.vec = new SVector{
                                  std::make_shared<std::vector<ValuePair>>()}});
         pc += 1;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
       }
       case Instruction::Echo: {
         if (top.tag != ValueTag::NUMBER) unimplemented();
         *ostream << top.value.number << std::endl;
         pc += 1;
-        inst = static_cast<Instruction>(fn->instructions[pc]);
         break;
       }
       default:
