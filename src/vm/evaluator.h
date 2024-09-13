@@ -17,7 +17,6 @@
 #include <atomic>
 #include <ostream>
 
-#include "instructions.h"
 #include "values.h"
 
 namespace sscad {
@@ -29,7 +28,6 @@ struct FunctionEntry {
 
 class Evaluator {
  public:
-  using ValuePair = std::pair<ValueTag, SValue>;
   Evaluator(std::ostream *ostream, std::vector<FunctionEntry> functions,
             std::vector<ValueTag> globalTags, std::vector<SValue> globalValues)
       : ostream(ostream),

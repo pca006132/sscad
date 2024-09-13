@@ -78,7 +78,7 @@ int main() {
   addInst(entry, Instruction::Ret);
 
   /**
-   * for (int i = 0; i < 100; i++) {
+   * for (int i = 0; i < 1000; i++) {
    *   int sum = 0;
    *   for (int j = 0; j < 100000; j++)
    *     sum += 2;
@@ -86,28 +86,39 @@ int main() {
    */
   constexpr bool doEcho = false;
   std::vector<unsigned char> pureloop;
-  addDouble(pureloop, 100);
-  addDouble(pureloop, 100000);
-  addDouble(pureloop, 0);  // local 2
-  int pureloopOuter = pureloop.size();
-  addInst(pureloop, Instruction::GetI, 2);
+  addDouble(pureloop, 100'000'000);
+  addDouble(pureloop, 0);
+  int pureloop_l1 = pureloop.size();
   addInst(pureloop, Instruction::Dup);
   addInst(pureloop, Instruction::GetI, 0);
   addBinOp(pureloop, BinOp::GE);
   addInst(pureloop, Instruction::JumpFalseI, 3);
   addInst(pureloop, Instruction::Ret);
   addInst(pureloop, Instruction::AddI, 1);
-  addInst(pureloop, Instruction::SetI, 2);
-  addDouble(pureloop, 0);
-  int pureloopInner = pureloop.size();
-  addInst(pureloop, Instruction::Dup);
-  addInst(pureloop, Instruction::GetI, 1);
-  addBinOp(pureloop, BinOp::GE);
-  addInst(pureloop, Instruction::JumpFalseI, 4 + (doEcho ? 1 : 0));
-  if (doEcho) addInst(pureloop, Instruction::Echo);
-  addInst(pureloop, Instruction::JumpI, pureloopOuter - pureloop.size());
-  addInst(pureloop, Instruction::AddI, 1);
-  addInst(pureloop, Instruction::JumpI, pureloopInner - pureloop.size());
+  addInst(pureloop, Instruction::JumpI, pureloop_l1 - pureloop.size());
+  // print(std::cout, pureloop);
+
+  // addDouble(pureloop, 100000);
+  // addDouble(pureloop, 0);  // local 2
+  // int pureloopOuter = pureloop.size();
+  // addInst(pureloop, Instruction::GetI, 2);
+  // addInst(pureloop, Instruction::Dup);
+  // addInst(pureloop, Instruction::GetI, 0);
+  // addBinOp(pureloop, BinOp::GE);
+  // addInst(pureloop, Instruction::JumpFalseI, 3);
+  // addInst(pureloop, Instruction::Ret);
+  // addInst(pureloop, Instruction::AddI, 1);
+  // addInst(pureloop, Instruction::SetI, 2);
+  // addDouble(pureloop, 0);
+  // int pureloopInner = pureloop.size();
+  // addInst(pureloop, Instruction::Dup);
+  // addInst(pureloop, Instruction::GetI, 1);
+  // addBinOp(pureloop, BinOp::GE);
+  // addInst(pureloop, Instruction::JumpFalseI, 4 + (doEcho ? 1 : 0));
+  // if (doEcho) addInst(pureloop, Instruction::Echo);
+  // addInst(pureloop, Instruction::JumpI, pureloopOuter - pureloop.size());
+  // addInst(pureloop, Instruction::AddI, 1);
+  // addInst(pureloop, Instruction::JumpI, pureloopInner - pureloop.size());
 
   // print(std::cout, pureloop);
 
@@ -116,9 +127,9 @@ int main() {
       {FunctionEntry{list1, 0, false}, FunctionEntry{foo, 2, false},
        FunctionEntry{entry, 0, false}, FunctionEntry{pureloop, 0, false}},
       {}, {});
-  for (int i = 0; i < 10000; i++) evaluator.eval(0);
-  std::cout << "------------" << std::endl;
-  for (int i = 0; i < 100; i++) evaluator.eval(2);
+  // for (int i = 0; i < 10000; i++) evaluator.eval(0);
+  // std::cout << "------------" << std::endl;
+  // for (int i = 0; i < 100; i++) evaluator.eval(2);
   evaluator.eval(3);
   return 0;
 }

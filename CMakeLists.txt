@@ -50,6 +50,7 @@ add_library(sscad
     src/parsing/scanner_helper.cpp
     src/vm/evaluator.cpp
     src/vm/instructions.cpp
+    src/vm/values.cpp
     src/utils/ast_printer.cpp
     ${BISON_Parser_OUTPUTS} ${FLEX_Scanner_OUTPUTS})
 target_include_directories(sscad PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
@@ -59,7 +60,7 @@ target_compile_features(sscad PUBLIC cxx_std_17)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 # only needed for the evaluator performance
-target_compile_options(sscad PUBLIC -mllvm -align-all-nofallthru-blocks=6)
+set_source_files_properties(src/vm/evaluator.cpp PROPERTIES COMPILE_FLAGS "-mllvm -align-all-nofallthru-blocks=6")
 endif()
 
 add_subdirectory(test)

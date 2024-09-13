@@ -93,8 +93,27 @@ union SValue {
   // unsigned char* array;
 };
 
+struct ValuePair {
+  ValueTag tag;
+  SValue value;
+  constexpr ValuePair(ValueTag tag, SValue value) : tag(tag), value(value) {}
+  constexpr ValuePair(double number)
+      : tag(ValueTag::NUMBER), value(SValue{.number = number}) {}
+  constexpr ValuePair(size_t number)
+      : tag(ValueTag::NUMBER),
+        value(SValue{.number = static_cast<double>(number)}) {}
+  constexpr ValuePair(bool cond)
+      : tag(ValueTag::BOOLEAN), value(SValue{.cond = cond}) {}
+  constexpr static ValuePair undef() {
+    return ValuePair(ValueTag::UNDEF, SValue{});
+  }
+
+  bool operator==(ValuePair rhs) const;
+  bool operator!=(ValuePair rhs) const { return !(*this == rhs); }
+};
+
 struct SVector {
-  std::shared_ptr<std::vector<std::pair<ValueTag, SValue>>> values;
+  std::shared_ptr<std::vector<ValuePair>> values;
 };
 
 struct SRange {
